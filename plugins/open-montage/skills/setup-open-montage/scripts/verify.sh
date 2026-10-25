@@ -71,19 +71,25 @@ for mod in faster_whisper whisperx piper fastapi; do
   fi
 done
 
+if av_v=$("$py" -c "import av; print(av.__version__)" 2>/dev/null) && [[ -n "$av_v" ]]; then
+  if (( ${av_v%%.*} < 19 )); then line PASS av "$av_v"; else line FAIL av "$av_v (need <19: pip install \"av<19\")"; fi
+else
+  line FAIL av "not importable"
+fi
+
 if [[ -d "$dir/remotion-composer/node_modules" ]]; then line PASS remotion "node_modules installed"; else line FAIL remotion "run npm install in remotion-composer"; fi
 
-if hf_v=$(cd "$dir" && npx --no-install hyperframes --version 2>/dev/null | head -1) && [[ -n "$hf_v" ]]; then
+if hf_v=$(cd "$dir" && perl -e 'alarm shift; exec @ARGV' 60 npx --yes hyperframes --version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+)+' | head -1) && [[ -n "$hf_v" ]]; then
   line PASS hyperframes "$hf_v"
 else
-  line WARN hyperframes "not cached; fetched on first render"
+  line WARN hyperframes "not available within 60 s; fetched on first render"
 fi
 
 env="$dir/.env"
 if [[ -f "$env" ]]; then
   perms=$(stat -f '%Lp' "$env")
   if [[ "$perms" == 600 ]]; then line PASS "env permissions" "600"; else line FAIL "env permissions" "$perms (need 600)"; fi
-  for var in HF_TOKEN PIXABAY_API_KEY PEXELS_API_KEY ELEVENLABS_API_KEY; do
+  for var in HF_TOKEN PIXABAY_API_KEY ELEVENLABS_API_KEY; do
     if ! grep -q "^${var}=." "$env"; then
       line WARN env "$var not set"
       continue

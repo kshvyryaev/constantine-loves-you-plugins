@@ -4,7 +4,7 @@ Guided setup of [OpenMontage](https://github.com/calesthio/OpenMontage), the ope
 
 The `setup-open-montage` skill takes you from an empty Mac to a verified install:
 
-1. Walks you through four sign-ups, one at a time, and collects each API key through a hidden macOS dialog (or a file you point to). Keys never appear in the chat.
+1. Walks you through three sign-ups, one at a time, and collects each API key through a hidden macOS dialog (or a file you point to). Keys never appear in the chat.
 2. Asks where to install (default `~/OpenMontage`).
 3. Installs the toolchain: Xcode Command Line Tools, Homebrew, git, uv, Python 3.12, FFmpeg, Node.js 22+.
 4. Clones OpenMontage and installs its Python stack (requirements, Piper, faster-whisper, WhisperX) and Node stack (Remotion, HyperFrames) in two parallel sub-agents.
@@ -17,8 +17,7 @@ The `setup-open-montage` skill takes you from an empty Mac to a verified install
 |---|---|---|---|
 | Hugging Face | `HF_TOKEN` | Speaker diarization (WhisperX + pyannote) | Free |
 | Pixabay | `PIXABAY_API_KEY` | Stock video and images | Free |
-| Pexels | `PEXELS_API_KEY` | Stock video and images | Free |
-| ElevenLabs | `ELEVENLABS_API_KEY` | Narration, music, sound effects | Free tier; commercial use from ~$6/month |
+| ElevenLabs | `ELEVENLABS_API_KEY` | Narration, music, sound effects | Free tier; paid plans for commercial use |
 
 Any service can be skipped; the skill reports which feature that disables.
 

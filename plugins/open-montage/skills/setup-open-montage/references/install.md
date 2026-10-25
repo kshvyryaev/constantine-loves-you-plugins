@@ -1,6 +1,6 @@
 # Install commands
 
-Verified as of 2026-10 against OpenMontage `main` at commit `e01dbf4` (2026-10-24), WhisperX 3.8.6, uv 0.10 and HyperFrames on Node.js 22+. The skill installs the latest upstream versions on purpose, so users get current fixes. If an install fails on a newer upstream, fall back to the verified versions: `git -C "<INSTALL_DIR>" checkout e01dbf4` and `.venv/bin/python -m pip install whisperx==3.8.6`, then tell the user which version is pinned. If upstream requirements change, OpenMontage's README and `Makefile` are the source of truth; `verify.sh` relies on the Makefile's `preflight` target.
+Verified as of 2026-10 against OpenMontage `main` at commit `e01dbf4` (2026-10-24), WhisperX 3.8.6, faster-whisper 1.2.1 with PyAV (`av`) 18.1.0, uv 0.10 and HyperFrames on Node.js 22+. PyAV must stay below 19: av 19 removed an argument faster-whisper still passes, and faster-whisper does not cap it, so the Python brief pins `av<19`. The skill installs the latest upstream versions on purpose, so users get current fixes. If an install fails on a newer upstream, fall back to the verified versions: `git -C "<INSTALL_DIR>" checkout e01dbf4` and `.venv/bin/python -m pip install whisperx==3.8.6`, then tell the user which version is pinned. If upstream requirements change, OpenMontage's README and `Makefile` are the source of truth; `verify.sh` relies on the Makefile's `preflight` target.
 
 Write literal absolute paths in place of `<INSTALL_DIR>` and `<BREW_PREFIX>`. Admin installs, the Homebrew prefix and long-command timeouts follow SKILL.md § Critical rules.
 
@@ -15,7 +15,7 @@ Run in order. Skip any item whose check already passes.
    - If missing, the user runs `xcode-select --install`, accepts the macOS dialog and tells you when it finishes (5–15 minutes).
 2. **Homebrew.**
    - Check: `ls <BREW_PREFIX>/bin/brew` for `/opt/homebrew` (Apple Silicon) or `/usr/local` (Intel).
-   - If missing, the user pastes this into Terminal.app (not the `!` prefix: the installer needs an interactive terminal for the admin password):
+   - If missing, the user pastes this into Terminal.app (SKILL.md § Critical rules, rule 6):
      ```text
      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
      ```
@@ -42,11 +42,11 @@ Existing clone (reinstall or update). A previous run of `patch_diarization.py` e
 git -C "<INSTALL_DIR>" diff -U0 -- tools/analysis/transcriber.py | grep -E '^[+-][^+-]' | grep -vE 'DiarizationPipeline|hf_token'
 ```
 
-- **No output** → restore the file and update; Step 9 re-applies the patch:
+- **No output** → restore the file and update; Step 8 re-applies the patch:
   ```bash
   git -C "<INSTALL_DIR>" checkout -- tools/analysis/transcriber.py && git -C "<INSTALL_DIR>" pull --ff-only
   ```
-- **Any output** → the user edited the file. Show them `git -C "<INSTALL_DIR>" diff --stat` and ask before discarding anything.
+- **Any output** → the user edited the file. Show them `git -C "<INSTALL_DIR>" diff --stat` and ask before discarding anything. If they agree, run the **No output** command. If they decline, skip the update, keep the clone as it is, continue with the Python version rule below and list "OpenMontage not updated: local edits kept" under Open issues in the report.
 
 If the pull still refuses, see `troubleshooting.md` § Dependencies.
 
@@ -83,13 +83,14 @@ Run in order, stopping at the first failure:
 2. .venv/bin/python -m pip install piper-tts
 3. .venv/bin/python -m pip install faster-whisper
 4. .venv/bin/python -m pip install whisperx
-5. .venv/bin/python -m pip check
-6. .venv/bin/python -c "import faster_whisper, whisperx; print('imports ok')"
+5. .venv/bin/python -m pip install "av<19"
+6. .venv/bin/python -m pip check
+7. .venv/bin/python -c "import faster_whisper, whisperx, piper, fastapi; print('imports ok')"
 
 Rules:
 - Do not touch .env, do not read or print any API keys, do not edit files in the repo.
 - Do not install anything outside .venv and do not use sudo.
-- A warning from step 5 is not a failure; report it.
+- A warning from step 6 is not a failure; report it.
 
 Return exactly:
 STATUS: OK | FAILED
@@ -108,9 +109,10 @@ Every shell call starts fresh: begin EVERY command with
   cd "<INSTALL_DIR>" && eval "$(<BREW_PREFIX>/bin/brew shellenv)";
 Use a timeout of at least 10 minutes per command.
 
-Run in order, stopping at the first failure:
-1. cd remotion-composer && npm install
-2. npx --yes hyperframes --version
+Run in order:
+1. cd remotion-composer && npm install   (on failure, stop and return STATUS: FAILED)
+2. npx --yes hyperframes --version   (on failure, keep STATUS: OK and describe it in NOTES:
+   HyperFrames is fetched again on first render)
 
 Rules:
 - Do not touch .env, do not read or print any API keys, do not edit files in the repo.
@@ -120,5 +122,6 @@ Return exactly:
 STATUS: OK | FAILED
 FAILED_COMMAND: <command or "none">
 HYPERFRAMES_VERSION: <version printed by step 2 or "none">
+NOTES: <step 2 failure in one line, or "none">
 LAST_ERROR_LINES: <last 20 lines of output on failure, otherwise "none">
 ```

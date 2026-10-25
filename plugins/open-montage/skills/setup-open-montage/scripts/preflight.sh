@@ -2,7 +2,7 @@
 # Decide whether this Mac can run the setup, and classify an install folder.
 # Usage:
 #   preflight.sh                 system check
-#   preflight.sh --folder PATH   classify PATH for Step 6
+#   preflight.sh --folder PATH   classify PATH for Step 5
 # System output lines: "STATUS OK|STOP <reason>", "BREW_PREFIX <path|not installed>",
 #   "CLT yes|no", "TOOL <name> <path>", "STALE_STAGING <path>" (one per leftover key file).
 # Folder output: "FOLDER EMPTY|CLONE|FOREIGN <path>" plus "VENV <python version|none>" for a clone.
@@ -47,7 +47,7 @@ for t in git uv ffmpeg node; do
 done
 xcode-select -p >/dev/null 2>&1 && [[ ! -x "$prefix/bin/git" ]] && echo "TOOL git /usr/bin/git"
 
-for f in "${TMPDIR:-/tmp}"/open-montage-keys.*; do
+for f in "$HOME/Library/Caches/open-montage"/keys.* "${TMPDIR:-/tmp}"/open-montage-keys.*; do
   [[ -e "$f" ]] && echo "STALE_STAGING $f"
 done
 exit 0

@@ -2,7 +2,7 @@
 name: setup-open-montage
 description: >
   Installs and configures OpenMontage, the open-source agentic video production studio, on macOS
-  from scratch: walks the user through registering at Hugging Face, Pixabay, Pexels and ElevenLabs
+  from scratch: walks the user through registering at Hugging Face, Pixabay and ElevenLabs
   one service at a time, collects their API keys without exposing them in chat, asks for the
   install folder (default ~/OpenMontage), installs the toolchain and all dependencies, writes the
   keys into .env and verifies the install. Also adds or replaces keys in an existing install.
@@ -13,7 +13,7 @@ description: >
   (use the video-use skill), user is on Windows or Linux or asks to uninstall OpenMontage
   (no skill covers these; tell the user).
 metadata:
-  version: 1.0.0
+  version: 1.1.0
   author: kshvyryaev
 ---
 
@@ -25,15 +25,15 @@ Guide the user from an empty Mac to a verified OpenMontage install with every ag
 
 | File | Read when |
 |---|---|
-| `references/services.md` | Steps 2–5: sign-up steps, key settings, what each key enables |
-| `references/install.md` | Steps 7–8: toolchain commands, Python version rule, the two sub-agent briefs |
+| `references/services.md` | Steps 2–4: sign-up steps, key settings, what each key enables |
+| `references/install.md` | Steps 6–7: toolchain commands, Python version rule, the two sub-agent briefs |
 | `references/troubleshooting.md` | A command fails, or a result is not covered by the tables in this file |
-| `scripts/preflight.sh` | Steps 1 and 6: system check, leftover key files, install-folder classification |
-| `scripts/ask_secret.sh` | Steps 2–5: capture a key into the staging file without showing it |
-| `scripts/check_key.sh` | Steps 2–5: validate one key against its service |
-| `scripts/write_env.py` | Step 9: merge staged keys into `.env` |
-| `scripts/patch_diarization.py` | Steps 8–9: check and align OpenMontage's diarization call with the installed WhisperX |
-| `scripts/verify.sh` | Step 10: full install check |
+| `scripts/preflight.sh` | Steps 1 and 5: system check, leftover key files, install-folder classification |
+| `scripts/ask_secret.sh` | Steps 2–4: capture a key into the staging file without showing it |
+| `scripts/check_key.sh` | Steps 2–4: validate one key against its service |
+| `scripts/write_env.py` | Step 8: merge staged keys into `.env` |
+| `scripts/patch_diarization.py` | Steps 7–8: check and align OpenMontage's diarization call with the installed WhisperX |
+| `scripts/verify.sh` | Step 9: full install check |
 
 ## Preconditions
 
@@ -51,7 +51,7 @@ Guide the user from an empty Mac to a verified OpenMontage install with every ag
 4. **Load Homebrew in every shell.** Once Homebrew exists, start every shell command with `eval "$(<BREW_PREFIX>/bin/brew shellenv)";` — otherwise `brew`, `uv`, `node` and `ffmpeg` are not found in a fresh shell.
 5. **One service at a time.** Finish a service (key saved and checked, or explicitly skipped) before introducing the next.
 6. **Admin and interactive installs are the user's.** Give the exact command and wait until the user confirms it finished. The Homebrew installer asks for the admin password in a terminal, so it always goes to Terminal.app. `xcode-select --install` only opens a macOS dialog: in Claude Code the user may run it with the `!` prefix, in other clients in Terminal.app.
-7. **Long commands run in the background or with a long timeout** (10 minutes or more): `ask_secret.sh` (its dialog waits up to 10 minutes), `brew install`, `pip install`, `npm install`, the sub-agent briefs. A tool timeout on `ask_secret.sh` counts as `CANCELLED`.
+7. **Long commands get a long timeout** (10 minutes or more). `ask_secret.sh` always runs in the foreground (its dialog waits up to 10 minutes); a tool timeout on it counts as `CANCELLED`. `brew install`, `pip install`, `npm install` and the sub-agent briefs may also run in the background.
 8. **Never overwrite foreign data.** An existing install folder is reused only if it is an OpenMontage git clone; any other non-empty folder means asking for a different path. Local edits inside a clone are discarded only with the user's consent.
 9. **No success without evidence.** The final report comes only from `verify.sh` output.
 10. **Speak the user's language.** Commands, file names and env var names stay as they are.
@@ -65,20 +65,19 @@ OpenMontage setup:
 - [ ] 1. Preflight
 - [ ] 2. Hugging Face (HF_TOKEN)
 - [ ] 3. Pixabay (PIXABAY_API_KEY)
-- [ ] 4. Pexels (PEXELS_API_KEY)
-- [ ] 5. ElevenLabs (ELEVENLABS_API_KEY)
-- [ ] 6. Install folder
-- [ ] 7. Toolchain
-- [ ] 8. OpenMontage and dependencies
-- [ ] 9. Configure .env and WhisperX
-- [ ] 10. Verify and report
+- [ ] 4. ElevenLabs (ELEVENLABS_API_KEY)
+- [ ] 5. Install folder
+- [ ] 6. Toolchain
+- [ ] 7. OpenMontage and dependencies
+- [ ] 8. Configure .env and WhisperX
+- [ ] 9. Verify and report
 
 State:
 - SKILL_DIR: <absolute path>
 - STAGING: <absolute path>
 - INSTALL_DIR: <not chosen yet>
 - BREW_PREFIX: </opt/homebrew | /usr/local | not installed>
-- Services: HF=<pending|OK|unverified|skipped> Pixabay=<…> Pexels=<…> ElevenLabs=<…>
+- Services: HF=<pending|OK|unverified|skipped> Pixabay=<…> ElevenLabs=<…>
 ```
 
 **Completion gate:** do not send the final report while any checklist item is neither done, explicitly skipped by the user, nor listed under Open issues in the report.
@@ -89,16 +88,16 @@ State:
 
 - **Probe.** Run `bash "/abs/SKILL_DIR/scripts/preflight.sh"`. On `STATUS STOP <reason>`, tell the user the reason and stop. Never probe `git` or `python3` with `command -v`: without Command Line Tools they are stubs that look installed and can open the installer — `preflight.sh` avoids them.
 - **Leftover keys.** For every `STALE_STAGING <path>` line, tell the user a key file from an interrupted earlier run was found and remove it with `rm -f "<path>"`.
-- **Staging file.** Create the private key file and note its printed path as `STAGING`:
+- **Staging file.** Create the private key file in a fixed per-user folder (so a later session finds it even if `TMPDIR` changes) and note its printed path as `STAGING`:
   ```bash
-  STAGING=$(mktemp -t open-montage-keys); chmod 600 "$STAGING"; echo "$STAGING"
+  mkdir -p "$HOME/Library/Caches/open-montage" && chmod 700 "$HOME/Library/Caches/open-montage" && STAGING=$(mktemp "$HOME/Library/Caches/open-montage/keys.XXXXXX") && chmod 600 "$STAGING" && echo "$STAGING"
   ```
 - **State block.** Fill it: `BREW_PREFIX` comes from the probe's `BREW_PREFIX` line.
-- **Summary.** Tell the user in 2–3 lines what is already installed (`CLT`, `TOOL` lines), what will be installed, and that the next steps are four short sign-ups.
+- **Summary.** Tell the user in 2–3 lines what is already installed (`CLT`, `TOOL` lines), what will be installed, and that the next steps are three short sign-ups.
 
-### Steps 2–5 — Services
+### Steps 2–4 — Services
 
-Order: Hugging Face → Pixabay → Pexels → ElevenLabs. For each service, read its section in `references/services.md`, then:
+Order: Hugging Face → Pixabay → ElevenLabs. For each service, read its section in `references/services.md`, then:
 
 - **Instruct.** Give the user the numbered sign-up and key-creation steps from that section, including the required key settings.
 - **Hand-over.** Ask how they will hand over the key: **hidden dialog** (default) or **path to a file** holding either the bare key on one line or a `VAR=value` line (an existing `.env` works).
@@ -108,7 +107,7 @@ Order: Hugging Face → Pixabay → Pexels → ElevenLabs. For each service, rea
   # or, if the user named a file:
   bash "/abs/SKILL_DIR/scripts/ask_secret.sh" HF_TOKEN "/abs/STAGING" --from-file "/Users/me/Documents/hf-token.txt"
   ```
-  Expected: `SAVED: <VAR> (<n> chars)`. `CANCELLED`: the dialog was closed, left empty or timed out — ask the user and capture again. `ERROR`: follow `references/troubleshooting.md` § Keys.
+  Wait for its result line before **Validate**. Expected: `SAVED: <VAR> (<n> chars)`. `CANCELLED`: the dialog was closed, left empty or timed out — ask the user and capture again. `ERROR`: follow `references/troubleshooting.md` § Keys.
 - **Validate.** `bash "/abs/SKILL_DIR/scripts/check_key.sh" <VAR> "/abs/STAGING"`, then act on the result and update the State block:
 
 | Result | Action |
@@ -123,17 +122,17 @@ Order: Hugging Face → Pixabay → Pexels → ElevenLabs. For each service, rea
 
 A skipped service is allowed: drop its key with `bash "/abs/SKILL_DIR/scripts/ask_secret.sh" <VAR> "/abs/STAGING" --unset`, mark it `skipped`, and tell the user which feature it disables (listed in `references/services.md`). Only keys marked `OK` or `unverified` may remain in the staging file.
 
-### Step 6 — Install folder
+### Step 5 — Install folder
 
 - **Ask.** "Where should OpenMontage go? Default: `~/OpenMontage`". Expand `~` to an absolute path and record it as `INSTALL_DIR`.
 - **Classify.** Run `bash "/abs/SKILL_DIR/scripts/preflight.sh" --folder "<INSTALL_DIR>"` (it never calls `git`):
   - `FOLDER EMPTY` → use it.
-  - `FOLDER CLONE` → reuse it; Step 8 updates it.
+  - `FOLDER CLONE` → reuse it; Step 7 updates it.
   - `FOLDER FOREIGN` → ask for another path. Do not delete or overwrite.
 
-### Step 7 — Toolchain
+### Step 6 — Toolchain
 
-Follow `references/install.md` § Toolchain in order: Xcode Command Line Tools → Homebrew → one `brew install` of git, uv, ffmpeg and node → Node.js version check. Skip any item whose check already passes; wherever the user installs something, wait for their confirmation before continuing. Update `BREW_PREFIX` once Homebrew exists.
+Follow `references/install.md` § Toolchain in order: Xcode Command Line Tools → Homebrew → one `brew install` of git, uv, ffmpeg and node → Node.js version check. Skip any item whose check already passes. Wherever the user installs something, wait for their confirmation, then re-run `bash "/abs/SKILL_DIR/scripts/preflight.sh"` and copy its `CLT` and `BREW_PREFIX` lines into the State block; continue only when the item shows as present (`CLT yes`, or a `BREW_PREFIX` path), otherwise ask the user to finish the install.
 
 Check before moving on (Node.js requirement: `references/install.md` § Toolchain, **Node.js version**):
 
@@ -141,24 +140,24 @@ Check before moving on (Node.js requirement: `references/install.md` § Toolchai
 eval "$(<BREW_PREFIX>/bin/brew shellenv)"; git --version && uv --version && ffmpeg -version | head -1 && node --version
 ```
 
-### Step 8 — OpenMontage and dependencies
+### Step 7 — OpenMontage and dependencies
 
 - **Clone.** Clone or update, then create or reuse the virtual environment, exactly as in `references/install.md` § OpenMontage, including its Python version rule and its guard for local edits.
 - **Dependencies.** Launch **two sub-agents in parallel**, one per brief in `references/install.md` § Sub-agent briefs: **Python stack** and **Node stack**. Fill in `<INSTALL_DIR>` and `<BREW_PREFIX>` before sending. If no sub-agent tool exists, run both briefs yourself, one after the other.
-- **Reports.** Each brief returns `STATUS: OK` or `STATUS: FAILED` with the failing command and the last error lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only the failed brief — at most two re-runs per brief. If it still fails, mark the step as an open issue and continue to Step 9.
+- **Reports.** Each brief returns `STATUS: OK` or `STATUS: FAILED` with the failing command and the last error lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only the failed brief — at most two re-runs per brief, the last fallback being the pin to verified versions in that section. If it still fails, mark the step as an open issue and continue to Step 8. A `NOTES` value other than `none` goes under Open issues in the report.
 
-### Step 9 — Configure .env and WhisperX
+### Step 8 — Configure .env and WhisperX
 
 ```bash
 cd "/abs/INSTALL_DIR" && .venv/bin/python "/abs/SKILL_DIR/scripts/write_env.py" "/abs/INSTALL_DIR/.env" "/abs/STAGING"
 cd "/abs/INSTALL_DIR" && .venv/bin/python "/abs/SKILL_DIR/scripts/patch_diarization.py" "/abs/INSTALL_DIR"
 ```
 
-- `write_env.py` prints one `SET: <VAR>` per collected key. On `ERROR`, the clone is incomplete: repeat Step 8 **Clone**, then this step. Remove the staging file only after `SET` lines appear: `rm -f "/abs/STAGING"`.
+- `write_env.py` prints one `SET: <VAR>` per collected key. On `ERROR: neither … exists` or `.venv/bin/python: No such file or directory`, the clone or its venv is incomplete: repeat Step 7 **Clone**, then this step. On `ERROR: staging file not found`, the collected keys are lost: run Step 1 **Staging file**, capture the keys again (Steps 2–4), then this step. Remove the staging file only after `SET` lines appear: `rm -f "/abs/STAGING"`.
 - If every service was skipped, the staging file is empty: run `write_env.py` anyway (it creates `.env` from `.env.example` with mode 600), then remove the staging file.
 - `patch_diarization.py` prints `PATCHED: …` or `OK: …`. `SKIP` or `FAIL` means diarization will not work: note it for the report and continue.
 
-### Step 10 — Verify and report
+### Step 9 — Verify and report
 
 1. Run `bash "/abs/SKILL_DIR/scripts/verify.sh" "/abs/INSTALL_DIR" <BREW_PREFIX>`. Each check line starts with `PASS`, `WARN` or `FAIL`; the last line is `TOTAL fail=<n> warn=<n>`.
 2. For each `FAIL`, apply `references/troubleshooting.md` § Verification and run `verify.sh` again — at most two rounds. What still fails goes into the report as open.
@@ -173,14 +172,13 @@ Installed:
 Services:
 - Hugging Face — <OK / unverified / skipped: feature disabled>
 - Pixabay — ...
-- Pexels — ...
 - ElevenLabs — ...
 
 Open issues:
 - <each remaining FAIL/WARN with the one action that fixes it, or "none">
 
 Start working:
-  cd <INSTALL_DIR> && claude
+  open a new Claude session in <INSTALL_DIR> (Claude Code: cd <INSTALL_DIR> && claude),
   then describe the video and give the path to your footage.
 ```
 
@@ -196,10 +194,10 @@ Add keys to OpenMontage:
 - [ ] D. Verify and report
 ```
 
-- **A.** Run Step 1 **Probe**, **Leftover keys**, **Staging file** and **State block**. Ask for the existing install and run Step 6 **Classify** on it. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise remove the staging file and offer the full install instead.
-- **B.** Run Steps 2–5 for the affected services only.
-- **C.** Run the `write_env.py` command from Step 9, then remove the staging file.
-- **D.** Run Step 10.
+- **A.** Run Step 1 **Probe**, **Leftover keys**, **Staging file** and **State block**. Ask for the existing install and run Step 5 **Classify** on it. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise remove the staging file and offer the full install instead.
+- **B.** Run Steps 2–4 for the affected services only.
+- **C.** Run the `write_env.py` command from Step 8, then remove the staging file.
+- **D.** Run Step 9.
 
 ## Troubleshooting
 

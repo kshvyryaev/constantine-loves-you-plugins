@@ -47,9 +47,6 @@ case "$var" in
   PIXABAY_API_KEY)
     result=$(classify "$(request "url = \"https://pixabay.com/api/?key=${value}&q=test&per_page=3\"")")
     ;;
-  PEXELS_API_KEY)
-    result=$(classify "$(request 'url = "https://api.pexels.com/v1/search?query=test&per_page=1"' "header = \"Authorization: $value\"")")
-    ;;
   ELEVENLABS_API_KEY)
     code=$(request 'url = "https://api.elevenlabs.io/v1/user"' "header = \"xi-api-key: $value\"")
     if [[ "$code" == 401 ]] && grep -q missing_permissions "$body"; then

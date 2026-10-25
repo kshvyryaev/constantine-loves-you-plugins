@@ -1,12 +1,13 @@
 """Merge KEY=value pairs from a staging file into OpenMontage's .env without printing values.
 
 Usage: write_env.py <INSTALL_DIR>/.env <STAGING_FILE>
-Creates .env from .env.example when missing, replaces existing KEY= lines and appends new keys.
+Creates .env from .env.example when missing, replaces existing KEY= or export KEY= lines and appends new keys.
 The file is restricted to the current user before any key is written.
 Prints one "SET: KEY" line per key.
 """
 
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -28,6 +29,8 @@ def write_private(path: Path, text: str) -> None:
 
 
 def main(env_path: Path, staging: Path) -> None:
+    if not staging.is_file():
+        sys.exit(f"ERROR: staging file not found: {staging}")
     if env_path.exists():
         env_path.chmod(0o600)
         lines = env_path.read_text().splitlines()
@@ -42,7 +45,7 @@ def main(env_path: Path, staging: Path) -> None:
     for i, line in enumerate(lines):
         if line.lstrip().startswith("#") or "=" not in line:
             continue
-        key = line.split("=", 1)[0].strip()
+        key = re.sub(r"^export\s+", "", line.split("=", 1)[0].strip())
         if key in pairs:
             lines[i] = f"{key}={pairs[key]}"
             written.add(key)

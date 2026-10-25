@@ -2,9 +2,11 @@
 
 Verified as of 2026-10. Sign-up pages change: if a button or permission name no longer matches, follow the service's own docs linked in its section and tell the user what differs.
 
-Four services, collected in this order. Each section gives the steps to show the user, the env var, what OpenMontage uses the key for, and what is lost if the user skips it. What to do with each `check_key.sh` result is defined only in SKILL.md § Steps 2–5.
+Three services, collected in this order. Each section gives the steps to show the user, the env var, what OpenMontage uses the key for, and what is lost if the user skips it. What to do with each `check_key.sh` result is defined only in SKILL.md § Steps 2–4.
 
-Contents: [Hugging Face](#hugging-face) · [Pixabay](#pixabay) · [Pexels](#pexels) · [ElevenLabs](#elevenlabs)
+Pexels is not collected: it has paused issuing new API keys, so new users cannot get one. Do not re-add it until https://www.pexels.com/api/ issues keys again.
+
+Contents: [Hugging Face](#hugging-face) · [Pixabay](#pixabay) · [ElevenLabs](#elevenlabs)
 
 ## Hugging Face
 
@@ -32,20 +34,6 @@ Steps for the user:
 
 1. Sign up at https://pixabay.com/accounts/register/ (Google sign-in works).
 2. While signed in, open https://pixabay.com/api/docs/ and scroll to **Parameters**. The value in the `key (required)` row is the key.
-
-## Pexels
-
-- **Env var:** `PEXELS_API_KEY`
-- **Used for:** free stock video and images; a second stock source next to Pixabay.
-- **If skipped:** OpenMontage uses the remaining stock sources.
-- **Cost:** free.
-- **Docs:** https://www.pexels.com/api/documentation/
-
-Steps for the user:
-
-1. Sign up at https://www.pexels.com/join/.
-2. Open https://www.pexels.com/api/ → **Your API Key** (first time: fill the short form describing the project, e.g. "personal video editing with OpenMontage").
-3. Copy the key shown on the page.
 
 ## ElevenLabs
 
