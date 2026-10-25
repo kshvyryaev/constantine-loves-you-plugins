@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.1 — 2026-10-25
+
+### Removed
+
+- Routing to another video-editing skill from the description's "Don't use when" clause, and the example of reusing a key from it in `services.md`.
+
 ## 1.3.0 — 2026-10-25
 
 ### Added
@@ -29,7 +35,7 @@
 
 - Speaker diarization is fixed with a compatibility layer in `.venv` (`install_compat.py` + `openmontage_whisperx_compat.py`, loaded through a `.pth` file) instead of editing OpenMontage's `tools/analysis/transcriber.py`. The clone stays clean, so `git pull` always fast-forwards. Verified end to end on WhisperX 3.8.6 with a two-speaker recording.
 - `verify.sh` checks the compatibility layer instead of the patched file.
-- Skill description shortened to about 820 characters, leaving room below the 1024 limit; triggers unchanged, and the video-use route reads "if installed".
+- Skill description shortened to about 820 characters, leaving room below the 1024 limit; triggers unchanged.
 
 ### Fixed
 

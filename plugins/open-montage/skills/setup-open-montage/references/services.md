@@ -50,4 +50,4 @@ Steps for the user:
 3. Set permissions: **Text to Speech**, **Speech to Text**, **Sound Effects** and **Music** — Access; **User** — Read. `check_key.sh` validates the key through the User endpoint, so User Read is required.
 4. Create the key and copy it — ElevenLabs shows it only once.
 
-An existing ElevenLabs key (for example from video-use) can be reused if it has every permission above; otherwise the user edits its permissions or creates a new one.
+An existing ElevenLabs key can be reused if it has every permission above; otherwise the user edits its permissions or creates a new one.

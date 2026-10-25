@@ -9,11 +9,10 @@ description: >
   "fix hyperframes doctor in OpenMontage", "установи OpenMontage", "настрой OpenMontage",
   "добавь ключи в OpenMontage", "поставь локальные дополнения OpenMontage".
   Don't use when: user wants to produce a video with an existing OpenMontage install (no skill:
-  start Claude inside the OpenMontage folder), user wants to cut footage without OpenMontage
-  (use the video-use skill if installed), user is on Windows or Linux or asks to uninstall OpenMontage
-  (no skill covers these; tell the user).
+  start Claude inside the OpenMontage folder), user is on Windows or Linux or asks to uninstall
+  OpenMontage (no skill covers these; tell the user).
 metadata:
-  version: 1.3.0
+  version: 1.3.1
   author: kshvyryaev
 ---
 
