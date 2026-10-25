@@ -5,7 +5,7 @@
 #   preflight.sh --keep STAGING  system check that does not list the current STAGING file as stale
 #   preflight.sh --folder PATH   classify PATH for Step 5
 # System output lines: "STATUS OK|LOW_DISK <reason>|STOP <reason>", "BREW_PREFIX <path|not installed>",
-#   "CLT yes|no", "TOOL <name> <path>", "STALE_STAGING <path>" (one per leftover key file).
+#   "ARCH arm64|x86_64", "CLT yes|no", "TOOL <name> <path>", "STALE_STAGING <path>" (one per leftover key file).
 # Folder output: "FOLDER EMPTY|CLONE|FOREIGN <path>", "VENV <python version|none>" for a clone, and
 #   "DISK OK|LOW <n> GB free" for the drive PATH is on (its nearest existing parent folder).
 # A new install needs 10 GB free on the drive of the install folder.
@@ -55,6 +55,7 @@ if [[ -n "$reason" ]]; then echo "STATUS STOP $reason"
 elif [[ -n "$low" ]]; then echo "STATUS LOW_DISK $low"
 else echo "STATUS OK"; fi
 
+echo "ARCH $(uname -m)"
 if [[ "$(uname -m)" == arm64 ]]; then prefix=/opt/homebrew; else prefix=/usr/local; fi
 if [[ -x "$prefix/bin/brew" ]]; then echo "BREW_PREFIX $prefix"; else echo "BREW_PREFIX not installed"; fi
 

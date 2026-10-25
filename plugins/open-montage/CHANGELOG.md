@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.3.0 — 2026-10-25
+
+### Added
+
+- Step 10, optional local extras for HyperFrames, offered once after a clean `verify.sh` run: whisper.cpp (`brew install whisper-cpp`), Kokoro and MusicGen packages (`kokoro-onnx`, `soundfile` in `.venv`), `HYPERFRAMES_PYTHON` in `.env` pointing at the venv Python, and an optional Docker Desktop start with time-limited probes. Instructions and trade-offs live in the new `references/extras.md`; verified on a real install, where `hyperframes doctor` then showed ✓ for whisper-cpp, Kokoro, MusicGen and Docker.
+- `hyperframes_doctor.py` runs `make hyperframes-doctor` under a 300-second limit and prints the doctor's ✓/✗ lines, which the final report lists under **Local extras**.
+- `write_env.py --set VAR=VALUE` writes one non-secret setting idempotently, keeping `.env` at mode 600; names that look like secrets are refused.
+- § Add local extras later for existing installs. The description is shorter (about 930 characters) and gains the triggers "add local extras to OpenMontage", "fix hyperframes doctor in OpenMontage", and Russian triggers for the add-key and extras flows.
+- Troubleshooting § Local extras: flaky npm lookup (`runtime_available=False`, 5-second `npm view` limit), `docker info` hanging or returning HTTP 500, a doctor version notice ahead of npm (`make hyperframes-warm` changes nothing), `HYPERFRAMES_PYTHON` pointing at the system Python or overridden by the shell.
+
+### Changed
+
+- `verify.sh` reports the extras: absent ones as `INFO` (not counted), a `HYPERFRAMES_PYTHON` that is unset while Kokoro is installed, points to a missing interpreter or to another Python as `WARN`, never `FAIL`. Python imports, the diarization check, `make preflight`, `npx hyperframes` and `docker info` now all run under a time limit.
+- Workflow ends with Step 9 Verify, Step 10 Local extras (optional) and Step 11 Report; the add-key flow runs Steps 9 and 11.
+- README and Preconditions name Apple Silicon as the verified platform. `preflight.sh` prints `ARCH arm64|x86_64`, and Step 1 warns Intel users before any sign-up that the Python stack will probably not install (no current PyTorch Intel macOS wheels); troubleshooting covers `No matching distribution found for torch` on Intel. Preconditions list `perl` and `make`.
+
+### Fixed
+
+- Version pin fallback shows `git status --short` and unpushed commits on `main` and waits for consent before `git checkout -B main`, in line with the never-overwrite rule.
+- Python version rule: declining to recreate an unsupported `.venv` now stops the install with a defined report instead of failing later in Step 8; SKILL.md Step 7 states this early stop.
+- A key the user kept as `unverified` no longer sends Step 9 back to troubleshooting or blocks the extras offer: its `FAIL key` line goes straight to Open issues.
+- The Node brief runs `git status --short` after `npm install` and reports changed files in `NOTES`, so a rewritten lockfile is noticed before it blocks the next `git pull --ff-only`.
+
 ## 1.2.0 — 2026-10-25
 
 ### Changed

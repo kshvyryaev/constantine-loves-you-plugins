@@ -9,7 +9,9 @@ The `setup-open-montage` skill takes you from an empty Mac to a verified install
 3. Installs the toolchain: Xcode Command Line Tools, Homebrew, git, uv, Python 3.12, FFmpeg, Node.js 22+.
 4. Clones OpenMontage and installs its Python stack (requirements, Piper, faster-whisper, WhisperX) and Node stack (Remotion, HyperFrames) in two parallel sub-agents.
 5. Writes the keys into `.env` (mode 600) and adds a small compatibility layer to the virtual environment so OpenMontage's speaker diarization works with current WhisperX, without editing OpenMontage's code.
-6. Verifies every tool, import and key, and prints what is installed and configured.
+6. Verifies every tool, import and key.
+7. Optionally adds local extras for HyperFrames: whisper.cpp, the Kokoro voice and MusicGen music packages, and a Docker Desktop start. OpenMontage works without them; the Kokoro model (~300 MB) and MusicGen weights (1.5–3 GB) download on first use.
+8. Prints what is installed and configured.
 
 ## Services
 
@@ -23,7 +25,7 @@ Any service can be skipped; the skill reports which feature that disables.
 
 ## Requirements
 
-- macOS (Apple Silicon or Intel)
+- macOS on Apple Silicon (verified). Intel Macs are not verified: PyTorch no longer publishes Intel macOS wheels, so WhisperX may not install there.
 - 10 GB free disk space on the drive you install to
 - Your Mac admin password (Homebrew, Xcode Command Line Tools)
 
@@ -40,6 +42,7 @@ Any service can be skipped; the skill reports which feature that disables.
 install OpenMontage
 set up OpenMontage
 установи OpenMontage
+add local extras to OpenMontage
 ```
 
 Skill: `open-montage:setup-open-montage`

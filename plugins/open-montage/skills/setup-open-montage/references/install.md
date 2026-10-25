@@ -58,7 +58,7 @@ cd "<INSTALL_DIR>" && { [ -x .venv/bin/python ] || uv venv --seed --python 3.12 
 
 `--seed` puts `pip` into the venv; OpenMontage's Makefile calls `python -m pip`.
 
-Check: the version printed is 3.10–3.13. If an existing `.venv` reports anything else, ask the user, then recreate it — `--clear` deletes the old environment:
+Check: the version printed is 3.10–3.13. If an existing `.venv` reports anything else, ask the user, then recreate it — `--clear` deletes the old environment. If they decline, follow SKILL.md § Step 7 **Clone**:
 
 ```bash
 cd "<INSTALL_DIR>" && uv venv --clear --seed --python 3.12 .venv
@@ -113,6 +113,8 @@ Run in order:
 1. cd remotion-composer && npm install   (on failure, stop and return STATUS: FAILED)
 2. npx --yes hyperframes --version   (on failure, keep STATUS: OK and describe it in NOTES:
    HyperFrames is fetched again on first render)
+3. git status --short   (npm install may rewrite a tracked lockfile; list any changed file in
+   NOTES, because a dirty clone blocks the next `git pull --ff-only`)
 
 Rules:
 - Do not touch .env, do not read or print any API keys, do not edit files in the repo.
@@ -122,13 +124,19 @@ Return exactly:
 STATUS: OK | FAILED
 FAILED_COMMAND: <command or "none">
 HYPERFRAMES_VERSION: <version printed by step 2 or "none">
-NOTES: <step 2 failure in one line, or "none">
+NOTES: <step 2 failure in one line and step 3 changed files, or "none">
 LAST_ERROR_LINES: <last 20 lines of output on failure, otherwise "none">
 ```
 
 ## Version pin fallback
 
-Use only when a brief keeps failing on a newer upstream after the fixes in `troubleshooting.md` § Dependencies. Pin OpenMontage and WhisperX to the verified versions from the intro:
+Use only when a brief keeps failing on a newer upstream after the fixes in `troubleshooting.md` § Dependencies. The pin moves the clone's `main` branch, so first show the user what it would drop and wait for their consent:
+
+```bash
+git -C "<INSTALL_DIR>" status --short && git -C "<INSTALL_DIR>" log --oneline origin/main..main
+```
+
+Both print nothing on an untouched clone. If they print anything and the user declines, do not pin: list the failing brief under Open issues instead. Otherwise pin OpenMontage and WhisperX to the verified versions from the intro:
 
 ```bash
 git -C "<INSTALL_DIR>" checkout -B main e01dbf4 && cd "<INSTALL_DIR>" && .venv/bin/python -m pip install whisperx==3.8.6

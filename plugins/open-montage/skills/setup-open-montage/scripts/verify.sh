@@ -2,7 +2,8 @@
 # Check an OpenMontage install end to end. Never prints key values.
 # Usage: verify.sh INSTALL_DIR [BREW_PREFIX]
 # BREW_PREFIX defaults to /opt/homebrew on arm64 and /usr/local on x86_64.
-# Output: one "PASS|WARN|FAIL <check> <detail>" line per check, then a totals line.
+# Output: one "PASS|WARN|FAIL|INFO <check> <detail>" line per check, then a totals line.
+# INFO marks an optional local extra that is absent; it is not counted. Every slow probe has a time limit.
 # Exit code 1 if any FAIL.
 set -uo pipefail
 
@@ -12,6 +13,8 @@ dir="${dir/#\~/$HOME}"
 here="$(cd "$(dirname "$0")" && pwd)"
 py="$dir/.venv/bin/python"
 fails=0; warns=0
+
+bounded() { local s="$1"; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
 
 line() {
   printf '%s %s %s\n' "$1" "$2" "$3"
@@ -64,7 +67,7 @@ else
 fi
 
 for mod in faster_whisper whisperx piper fastapi; do
-  if "$py" -c "import $mod" >/dev/null 2>&1; then
+  if bounded 120 "$py" -c "import $mod" >/dev/null 2>&1; then
     line PASS "import" "$mod"
   else
     line FAIL "import" "$mod"
@@ -79,7 +82,7 @@ fi
 
 if [[ -d "$dir/remotion-composer/node_modules" ]]; then line PASS remotion "node_modules installed"; else line FAIL remotion "run npm install in remotion-composer"; fi
 
-if hf_v=$(cd "$dir" && perl -e 'alarm shift; exec @ARGV' 60 npx --yes hyperframes --version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+)+' | head -1) && [[ -n "$hf_v" ]]; then
+if hf_v=$(cd "$dir" && bounded 60 npx --yes hyperframes --version 2>/dev/null | grep -Eo '[0-9]+(\.[0-9]+)+' | head -1) && [[ -n "$hf_v" ]]; then
   line PASS hyperframes "$hf_v"
 else
   line WARN hyperframes "not available within 60 s; fetched on first render"
@@ -106,13 +109,59 @@ else
 fi
 
 diar=""
-[[ -x "$py" ]] && diar=$(cd "$dir" && "$py" "$here/install_compat.py" --check 2>&1 | tail -1)
+[[ -x "$py" ]] && diar=$(cd "$dir" && bounded 180 "$py" "$here/install_compat.py" --check 2>&1 | tail -1)
 case "$diar" in
   OK:*) line PASS diarization "${diar#OK: }" ;;
   *) line WARN diarization "${diar:-compat check did not run}" ;;
 esac
 
-if (cd "$dir" && make -s preflight >/dev/null 2>&1); then line PASS preflight "make preflight ok"; else line FAIL preflight "make preflight failed"; fi
+if (cd "$dir" && bounded 180 make -s preflight >/dev/null 2>&1); then line PASS preflight "make preflight ok"; else line FAIL preflight "make preflight failed or took over 180 s"; fi
+
+# Optional local extras for HyperFrames (SKILL.md Step 10): absent is INFO, a broken setting is WARN, never FAIL.
+if wcli=$(command -v whisper-cli); then line PASS whisper-cpp "$wcli"; else line INFO whisper-cpp "not installed (optional local extra)"; fi
+
+missing=""
+if [[ -x "$py" ]]; then
+  missing=$(bounded 60 "$py" -c 'import importlib.util as u; print("MISSING", *[m for m in ("kokoro_onnx", "soundfile", "transformers", "torch", "numpy") if u.find_spec(m) is None])' 2>/dev/null | tail -1)
+fi
+if [[ "$missing" != MISSING* ]]; then
+  line INFO extras "Python extras check did not run"
+  missing="MISSING kokoro_onnx soundfile transformers torch numpy"
+else
+  if [[ " $missing " != *" kokoro_onnx "* && " $missing " != *" soundfile "* ]]; then line PASS kokoro "kokoro-onnx, soundfile in .venv"; else line INFO kokoro "kokoro-onnx or soundfile not in .venv (optional local extra)"; fi
+  musicgen_missing=""
+  for m in transformers torch numpy soundfile; do [[ " $missing " == *" $m "* ]] && musicgen_missing+=" $m"; done
+  if [[ -z "$musicgen_missing" ]]; then line PASS musicgen "transformers, torch, numpy, soundfile in .venv"; else line INFO musicgen "missing in .venv:$musicgen_missing (optional local extra)"; fi
+fi
+
+if [[ -f "$env" ]]; then
+  hp=$(grep -m1 '^HYPERFRAMES_PYTHON=' "$env" | cut -d= -f2-)
+  hp="${hp%%[[:space:]]#*}"; hp="${hp#"${hp%%[![:space:]]*}"}"; hp="${hp%"${hp##*[![:space:]]}"}"
+  hp="${hp#\"}"; hp="${hp%\"}"; hp="${hp#\'}"; hp="${hp%\'}"
+  if [[ -z "$hp" ]]; then
+    if [[ " $missing " != *" kokoro_onnx "* ]]; then
+      line WARN hyperframes-python "HYPERFRAMES_PYTHON not set in .env: HyperFrames uses the first python3 on PATH and misses Kokoro/MusicGen in .venv"
+    else
+      line INFO hyperframes-python "HYPERFRAMES_PYTHON not set (needed only with local extras)"
+    fi
+  elif [[ ! -x "$hp" ]]; then
+    line WARN hyperframes-python "HYPERFRAMES_PYTHON points to a missing interpreter: $hp"
+  elif [[ "$hp" != "$py" ]]; then
+    line WARN hyperframes-python "HYPERFRAMES_PYTHON is $hp, not $py"
+  else
+    line PASS hyperframes-python "$hp"
+  fi
+fi
+
+docker_cli=$(command -v docker || true)
+[[ -z "$docker_cli" && -x /Applications/Docker.app/Contents/Resources/bin/docker ]] && docker_cli=/Applications/Docker.app/Contents/Resources/bin/docker
+if [[ -z "$docker_cli" ]]; then
+  line INFO docker "Docker Desktop not installed (optional: isolated rendering)"
+elif bounded 20 "$docker_cli" info >/dev/null 2>&1; then
+  line PASS docker "running"
+else
+  line INFO docker "not running or no answer within 20 s (optional: isolated rendering)"
+fi
 
 echo "TOTAL fail=$fails warn=$warns"
 (( fails == 0 ))

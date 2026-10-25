@@ -4,7 +4,7 @@
 
 | Plugin | Description |
 |---|---|
-| [open-montage](plugins/open-montage) | Guided macOS setup of OpenMontage: service keys, toolchain, dependencies, `.env` and verification |
+| [open-montage](plugins/open-montage) | Guided macOS setup of OpenMontage: service keys, toolchain, dependencies, `.env`, verification and optional local HyperFrames extras |
 
 ## Installation
 
