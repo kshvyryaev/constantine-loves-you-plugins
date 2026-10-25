@@ -36,13 +36,13 @@ Fresh install:
 git clone https://github.com/calesthio/OpenMontage "<INSTALL_DIR>"
 ```
 
-Existing clone (reinstall or update). A previous run of `patch_diarization.py` edited one tracked file, which blocks the pull. First check that the file holds only that patch — this prints nothing when it does:
+Existing clone (reinstall or update). Installs made by skill versions before 1.2.0 edited one tracked file to fix diarization, which blocks the pull; current versions leave the repo untouched. First check that the file holds at most that old edit — this prints nothing when it does:
 
 ```bash
 git -C "<INSTALL_DIR>" diff -U0 -- tools/analysis/transcriber.py | grep -E '^[+-][^+-]' | grep -vE 'DiarizationPipeline|hf_token'
 ```
 
-- **No output** → restore the file and update; Step 8 re-applies the patch:
+- **No output** → restore the file and update; Step 8 installs the compatibility layer that replaces the old edit:
   ```bash
   git -C "<INSTALL_DIR>" checkout -- tools/analysis/transcriber.py && git -C "<INSTALL_DIR>" pull --ff-only
   ```

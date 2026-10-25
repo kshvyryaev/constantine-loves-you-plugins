@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0 — 2026-10-25
+
+### Changed
+
+- Speaker diarization is fixed with a compatibility layer in `.venv` (`install_compat.py` + `openmontage_whisperx_compat.py`, loaded through a `.pth` file) instead of editing OpenMontage's `tools/analysis/transcriber.py`. The clone stays clean, so `git pull` always fast-forwards. Verified end to end on WhisperX 3.8.6 with a two-speaker recording.
+- `verify.sh` checks the compatibility layer instead of the patched file.
+
+### Removed
+
+- `patch_diarization.py`. Clones patched by earlier versions are restored by the existing guard in `install.md` § OpenMontage before updating.
+
 ## 1.1.0 — 2026-10-25
 
 ### Removed

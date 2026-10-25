@@ -13,7 +13,7 @@ description: >
   (use the video-use skill), user is on Windows or Linux or asks to uninstall OpenMontage
   (no skill covers these; tell the user).
 metadata:
-  version: 1.1.0
+  version: 1.2.0
   author: kshvyryaev
 ---
 
@@ -32,7 +32,8 @@ Guide the user from an empty Mac to a verified OpenMontage install with every ag
 | `scripts/ask_secret.sh` | Steps 2–4: capture a key into the staging file without showing it |
 | `scripts/check_key.sh` | Steps 2–4: validate one key against its service |
 | `scripts/write_env.py` | Step 8: merge staged keys into `.env` |
-| `scripts/patch_diarization.py` | Steps 7–8: check and align OpenMontage's diarization call with the installed WhisperX |
+| `scripts/install_compat.py` | Steps 8–9: install or check the WhisperX compatibility layer in `.venv` |
+| `scripts/openmontage_whisperx_compat.py` | Never read it into context: `install_compat.py` copies it into `.venv` |
 | `scripts/verify.sh` | Step 9: full install check |
 
 ## Preconditions
@@ -150,12 +151,12 @@ eval "$(<BREW_PREFIX>/bin/brew shellenv)"; git --version && uv --version && ffmp
 
 ```bash
 cd "/abs/INSTALL_DIR" && .venv/bin/python "/abs/SKILL_DIR/scripts/write_env.py" "/abs/INSTALL_DIR/.env" "/abs/STAGING"
-cd "/abs/INSTALL_DIR" && .venv/bin/python "/abs/SKILL_DIR/scripts/patch_diarization.py" "/abs/INSTALL_DIR"
+cd "/abs/INSTALL_DIR" && .venv/bin/python "/abs/SKILL_DIR/scripts/install_compat.py"
 ```
 
 - `write_env.py` prints one `SET: <VAR>` per collected key. On `ERROR: neither … exists` or `.venv/bin/python: No such file or directory`, the clone or its venv is incomplete: repeat Step 7 **Clone**, then this step. On `ERROR: staging file not found`, the collected keys are lost: run Step 1 **Staging file**, capture the keys again (Steps 2–4), then this step. Remove the staging file only after `SET` lines appear: `rm -f "/abs/STAGING"`.
 - If every service was skipped, the staging file is empty: run `write_env.py` anyway (it creates `.env` from `.env.example` with mode 600), then remove the staging file.
-- `patch_diarization.py` prints `PATCHED: …` or `OK: …`. `SKIP` or `FAIL` means diarization will not work: note it for the report and continue.
+- `install_compat.py` puts a small compatibility layer into `.venv` instead of editing OpenMontage: OpenMontage calls `whisperx.DiarizationPipeline(use_auth_token=…)`, which WhisperX 3.8+ no longer provides, and the failure is swallowed silently. It prints `INSTALLED: …` or `OK: …`. `SKIP` or `FAIL` means diarization will not work: note it for the report and continue.
 
 ### Step 9 — Verify and report
 

@@ -106,10 +106,10 @@ else
 fi
 
 diar=""
-[[ -x "$py" ]] && diar=$("$py" "$here/patch_diarization.py" --check "$dir" 2>&1 | tail -1)
+[[ -x "$py" ]] && diar=$(cd "$dir" && "$py" "$here/install_compat.py" --check 2>&1 | tail -1)
 case "$diar" in
   OK:*) line PASS diarization "${diar#OK: }" ;;
-  *) line WARN diarization "${diar:-patch check did not run}" ;;
+  *) line WARN diarization "${diar:-compat check did not run}" ;;
 esac
 
 if (cd "$dir" && make -s preflight >/dev/null 2>&1); then line PASS preflight "make preflight ok"; else line FAIL preflight "make preflight failed"; fi

@@ -8,7 +8,7 @@ The `setup-open-montage` skill takes you from an empty Mac to a verified install
 2. Asks where to install (default `~/OpenMontage`).
 3. Installs the toolchain: Xcode Command Line Tools, Homebrew, git, uv, Python 3.12, FFmpeg, Node.js 22+.
 4. Clones OpenMontage and installs its Python stack (requirements, Piper, faster-whisper, WhisperX) and Node stack (Remotion, HyperFrames) in two parallel sub-agents.
-5. Writes the keys into `.env` (mode 600) and fixes OpenMontage's speaker-diarization call for current WhisperX.
+5. Writes the keys into `.env` (mode 600) and adds a small compatibility layer to the virtual environment so OpenMontage's speaker diarization works with current WhisperX, without editing OpenMontage's code.
 6. Verifies every tool, import and key, and prints what is installed and configured.
 
 ## Services

@@ -39,7 +39,7 @@ Contents: [Keys](#keys) · [Toolchain](#toolchain) · [Dependencies](#dependenci
 | `npx hyperframes` hangs or fails | Offline or npm registry blocked | Not a blocker: HyperFrames is fetched on first render |
 | `git pull --ff-only` refuses | Local changes in the clone | Show `git -C <INSTALL_DIR> status --short` to the user and ask before discarding anything |
 | A brief keeps failing after the fixes above, on an error none of them covers | Newer upstream OpenMontage or WhisperX broke the install | Pin to the verified versions as described in the `install.md` intro, re-run the failed brief, and tell the user which version is pinned |
-| `patch_diarization.py` prints `FAIL` | OpenMontage or WhisperX changed the diarization code | Leave it; diarization is optional. Report it so the user can check upstream OpenMontage issues |
+| `install_compat.py` prints `FAIL` | WhisperX changed its diarization API again | Leave it; diarization is optional. Report it so the user can check upstream OpenMontage and WhisperX issues |
 
 ## Verification
 
@@ -62,7 +62,7 @@ Contents: [Keys](#keys) · [Toolchain](#toolchain) · [Dependencies](#dependenci
 | `FAIL key <VAR>: INVALID` or `MISSING` | Offer SKILL.md § Add or replace a key later for that service |
 | `FAIL key <VAR>: UNEXPECTED_HTTP_<code>` | Re-run `verify.sh` once; if it repeats, report it as unverified with the code |
 | `WARN key <VAR>: UNREACHABLE` | Network issue; not a blocker. Suggest retrying later or with a VPN |
-| `WARN diarization NEEDS_PATCH: …` | Run the `patch_diarization.py` command from SKILL.md § Step 8 |
+| `WARN diarization FAIL: compatibility layer not installed …` | Run the `install_compat.py` command from SKILL.md § Step 8 |
 | `WARN diarization SKIP: …` | WhisperX is not installed: re-run the Python brief |
-| `WARN diarization FAIL: …` or `patch check did not run` | Upstream code changed or `.venv` is broken: report it as an open issue; diarization is optional |
+| `WARN diarization FAIL: …` (other) or `compat check did not run` | WhisperX changed again or `.venv` is broken: report it as an open issue; diarization is optional |
 | `FAIL preflight` | Run `make preflight` in `<INSTALL_DIR>` and show the user the last 20 lines; if the target no longer exists upstream, report it as an open issue |
