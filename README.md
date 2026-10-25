@@ -1,7 +1,5 @@
 # constantine-loves-you-plugins
 
-Claude Code plugins by kshvyryaev.
-
 ## Plugins
 
 | Plugin | Description |
