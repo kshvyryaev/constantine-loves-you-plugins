@@ -24,7 +24,7 @@ Any service can be skipped; the skill reports which feature that disables.
 ## Requirements
 
 - macOS (Apple Silicon or Intel)
-- 10 GB free disk space
+- 10 GB free disk space on the drive you install to
 - Your Mac admin password (Homebrew, Xcode Command Line Tools)
 
 ## Installation

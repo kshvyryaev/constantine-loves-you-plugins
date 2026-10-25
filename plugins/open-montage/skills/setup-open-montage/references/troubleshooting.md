@@ -38,7 +38,8 @@ Contents: [Keys](#keys) · [Toolchain](#toolchain) · [Dependencies](#dependenci
 | `npm ERR! EACCES` | npm cache owned by root from an earlier `sudo npm` | The user runs `sudo chown -R $(id -u):$(id -g) ~/.npm`, then re-run the Node brief |
 | `npx hyperframes` hangs or fails | Offline or npm registry blocked | Not a blocker: HyperFrames is fetched on first render |
 | `git pull --ff-only` refuses | Local changes in the clone | Show `git -C <INSTALL_DIR> status --short` to the user and ask before discarding anything |
-| A brief keeps failing after the fixes above, on an error none of them covers | Newer upstream OpenMontage or WhisperX broke the install | Pin to the verified versions as described in the `install.md` intro, re-run the failed brief, and tell the user which version is pinned |
+| `git pull --ff-only` says `You are not currently on a branch` | The clone was pinned with a plain `git checkout <commit>` | `git -C "<INSTALL_DIR>" switch main`, then pull again |
+| A brief keeps failing after the fixes above, on an error none of them covers | Newer upstream OpenMontage or WhisperX broke the install | Apply `install.md` § Version pin fallback |
 | `install_compat.py` prints `FAIL` | WhisperX changed its diarization API again | Leave it; diarization is optional. Report it so the user can check upstream OpenMontage and WhisperX issues |
 
 ## Verification

@@ -1,10 +1,10 @@
 # Install commands
 
-Verified as of 2026-10 against OpenMontage `main` at commit `e01dbf4` (2026-10-24), WhisperX 3.8.6, faster-whisper 1.2.1 with PyAV (`av`) 18.1.0, uv 0.10 and HyperFrames on Node.js 22+. PyAV must stay below 19: av 19 removed an argument faster-whisper still passes, and faster-whisper does not cap it, so the Python brief pins `av<19`. The skill installs the latest upstream versions on purpose, so users get current fixes. If an install fails on a newer upstream, fall back to the verified versions: `git -C "<INSTALL_DIR>" checkout e01dbf4` and `.venv/bin/python -m pip install whisperx==3.8.6`, then tell the user which version is pinned. If upstream requirements change, OpenMontage's README and `Makefile` are the source of truth; `verify.sh` relies on the Makefile's `preflight` target.
+Verified as of 2026-10 against OpenMontage `main` at commit `e01dbf4` (2026-10-24), WhisperX 3.8.6, faster-whisper 1.2.1 with PyAV (`av`) 18.1.0, uv 0.10 and HyperFrames on Node.js 22+. PyAV must stay below 19: av 19 removed an argument faster-whisper still passes, and faster-whisper does not cap it, so the Python brief pins `av<19`. The skill installs the latest upstream versions on purpose, so users get current fixes; if that breaks, apply § Version pin fallback. If upstream requirements change, OpenMontage's README and `Makefile` are the source of truth; `verify.sh` relies on the Makefile's `preflight` target.
 
 Write literal absolute paths in place of `<INSTALL_DIR>` and `<BREW_PREFIX>`. Admin installs, the Homebrew prefix and long-command timeouts follow SKILL.md § Critical rules.
 
-Contents: [Toolchain](#toolchain) · [OpenMontage](#openmontage) · [Sub-agent briefs](#sub-agent-briefs)
+Contents: [Toolchain](#toolchain) · [OpenMontage](#openmontage) · [Sub-agent briefs](#sub-agent-briefs) · [Version pin fallback](#version-pin-fallback)
 
 ## Toolchain
 
@@ -15,7 +15,7 @@ Run in order. Skip any item whose check already passes.
    - If missing, the user runs `xcode-select --install`, accepts the macOS dialog and tells you when it finishes (5–15 minutes).
 2. **Homebrew.**
    - Check: `ls <BREW_PREFIX>/bin/brew` for `/opt/homebrew` (Apple Silicon) or `/usr/local` (Intel).
-   - If missing, the user pastes this into Terminal.app (SKILL.md § Critical rules, rule 6):
+   - If missing, the user pastes this into Terminal.app (SKILL.md § Critical rules, **Admin and interactive installs are the user's**):
      ```text
      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
      ```
@@ -78,7 +78,7 @@ Every shell call starts fresh: begin EVERY command with
   cd "<INSTALL_DIR>" && eval "$(<BREW_PREFIX>/bin/brew shellenv)";
 Each install can take several minutes: use a timeout of at least 10 minutes per command.
 
-Run in order, stopping at the first failure:
+Run in order. Stop at the first failure in steps 1–5 or 7; step 6 never stops the run:
 1. .venv/bin/python -m pip install -r requirements.txt
 2. .venv/bin/python -m pip install piper-tts
 3. .venv/bin/python -m pip install faster-whisper
@@ -90,7 +90,7 @@ Run in order, stopping at the first failure:
 Rules:
 - Do not touch .env, do not read or print any API keys, do not edit files in the repo.
 - Do not install anything outside .venv and do not use sudo.
-- A warning from step 6 is not a failure; report it.
+- Step 6 (pip check) may exit non-zero on harmless version conflicts: always continue to step 7 and put its output in NOTES.
 
 Return exactly:
 STATUS: OK | FAILED
@@ -125,3 +125,13 @@ HYPERFRAMES_VERSION: <version printed by step 2 or "none">
 NOTES: <step 2 failure in one line, or "none">
 LAST_ERROR_LINES: <last 20 lines of output on failure, otherwise "none">
 ```
+
+## Version pin fallback
+
+Use only when a brief keeps failing on a newer upstream after the fixes in `troubleshooting.md` § Dependencies. Pin OpenMontage and WhisperX to the verified versions from the intro:
+
+```bash
+git -C "<INSTALL_DIR>" checkout -B main e01dbf4 && cd "<INSTALL_DIR>" && .venv/bin/python -m pip install whisperx==3.8.6
+```
+
+`-B main` keeps the clone on its branch, so a later `git pull --ff-only` still updates it. Re-run the failed brief, tell the user which versions are pinned and list the pin under Open issues in the report.

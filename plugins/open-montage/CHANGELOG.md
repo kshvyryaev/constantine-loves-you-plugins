@@ -6,6 +6,18 @@
 
 - Speaker diarization is fixed with a compatibility layer in `.venv` (`install_compat.py` + `openmontage_whisperx_compat.py`, loaded through a `.pth` file) instead of editing OpenMontage's `tools/analysis/transcriber.py`. The clone stays clean, so `git pull` always fast-forwards. Verified end to end on WhisperX 3.8.6 with a two-speaker recording.
 - `verify.sh` checks the compatibility layer instead of the patched file.
+- Skill description shortened to about 820 characters, leaving room below the 1024 limit; triggers unchanged, and the video-use route reads "if installed".
+
+### Fixed
+
+- The Step 6 re-check could delete the session's own keys: `preflight.sh --keep <STAGING>` leaves the current key file out of `STALE_STAGING`, and Step 6 uses it.
+- `install_compat.py` checks the layer in a fresh isolated interpreter, so it tests the installed `.pth` instead of the copy next to the script and leaves no `__pycache__` in the skill folder; it reads the verdict from stdout only, so pyannote warnings on stderr do not hide it; it replaces an outdated copy left by an earlier skill version.
+- Python brief: `pip check` never stops the run; its output goes to `NOTES` and the import check always runs.
+- The pin fallback uses `git checkout -B main e01dbf4`, so a pinned clone stays on its branch and later updates still fast-forward; the pin is listed under Open issues. Troubleshooting covers `You are not currently on a branch` from older pins.
+- `install.md` refers to the admin-install rule by name instead of by number.
+- Free space is checked where the install goes: `preflight.sh --folder` prints `DISK OK|LOW` for the install folder's drive, so an install on an external drive is no longer blocked by a full system disk. The system check reports a full home drive as `STATUS LOW_DISK` instead of `STOP`; Step 1 then settles the install folder before any sign-up, so a stop never comes after the user registered at three services. The add-key flow ignores both, so key changes never need free space.
+- Step 1 removes leftover key files before acting on `STATUS`, so they are cleaned up even when the run stops.
+- The version pin fallback has its own section, `install.md` § Version pin fallback, linked from Step 7 and troubleshooting.
 
 ### Removed
 

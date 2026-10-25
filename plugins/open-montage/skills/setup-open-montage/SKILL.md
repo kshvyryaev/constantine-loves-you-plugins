@@ -1,16 +1,15 @@
 ---
 name: setup-open-montage
 description: >
-  Installs and configures OpenMontage, the open-source agentic video production studio, on macOS
-  from scratch: walks the user through registering at Hugging Face, Pixabay and ElevenLabs
-  one service at a time, collects their API keys without exposing them in chat, asks for the
-  install folder (default ~/OpenMontage), installs the toolchain and all dependencies, writes the
-  keys into .env and verifies the install. Also adds or replaces keys in an existing install.
+  Guided macOS install of OpenMontage, the open-source agentic video studio: Hugging Face, Pixabay
+  and ElevenLabs sign-ups one at a time, API keys collected without showing them in chat, install
+  into a chosen folder (default ~/OpenMontage), verified end to end. Also adds or replaces keys in
+  an existing install.
   Use when user says "install OpenMontage", "set up OpenMontage", "configure OpenMontage",
   "reinstall OpenMontage", "add keys to OpenMontage", "установи OpenMontage", "настрой OpenMontage".
   Don't use when: user wants to produce a video with an existing OpenMontage install (no skill:
   start Claude inside the OpenMontage folder), user wants to cut footage without OpenMontage
-  (use the video-use skill), user is on Windows or Linux or asks to uninstall OpenMontage
+  (use the video-use skill if installed), user is on Windows or Linux or asks to uninstall OpenMontage
   (no skill covers these; tell the user).
 metadata:
   version: 1.2.0
@@ -38,7 +37,7 @@ Guide the user from an empty Mac to a verified OpenMontage install with every ag
 
 ## Preconditions
 
-- macOS 13 or newer with at least 10 GB free disk space (`preflight.sh` checks both).
+- macOS 13 or newer, and at least 10 GB free on the install folder's drive for a new install (`preflight.sh` checks both; adding keys needs no free space).
 - Internet access.
 - The user can enter their Mac admin password (Homebrew and Xcode Command Line Tools ask for it).
 - A GUI login session for the hidden key dialog. Over SSH or in a headless client, every key must come from a file (`--from-file`).
@@ -87,8 +86,9 @@ State:
 
 ### Step 1 — Preflight
 
-- **Probe.** Run `bash "/abs/SKILL_DIR/scripts/preflight.sh"`. On `STATUS STOP <reason>`, tell the user the reason and stop. Never probe `git` or `python3` with `command -v`: without Command Line Tools they are stubs that look installed and can open the installer — `preflight.sh` avoids them.
-- **Leftover keys.** For every `STALE_STAGING <path>` line, tell the user a key file from an interrupted earlier run was found and remove it with `rm -f "<path>"`.
+- **Probe.** Run `bash "/abs/SKILL_DIR/scripts/preflight.sh"`. Never probe `git` or `python3` with `command -v`: without Command Line Tools they are stubs that look installed and can open the installer — `preflight.sh` avoids them.
+- **Leftover keys.** Do this before acting on `STATUS`, even on `STOP`. For every `STALE_STAGING <path>` line, tell the user a key file from an interrupted earlier run was found and remove it with `rm -f "<path>"`.
+- **Status.** `STATUS STOP <reason>` (not macOS 13+): tell the user the reason and stop. `STATUS LOW_DISK <reason>`: the home folder's drive is short on space. Tell the user and run Step 5 now, before any sign-up, so a stop never comes after Steps 2–4. The add-key flow ignores `LOW_DISK`.
 - **Staging file.** Create the private key file in a fixed per-user folder (so a later session finds it even if `TMPDIR` changes) and note its printed path as `STAGING`:
   ```bash
   mkdir -p "$HOME/Library/Caches/open-montage" && chmod 700 "$HOME/Library/Caches/open-montage" && STAGING=$(mktemp "$HOME/Library/Caches/open-montage/keys.XXXXXX") && chmod 600 "$STAGING" && echo "$STAGING"
@@ -125,15 +125,18 @@ A skipped service is allowed: drop its key with `bash "/abs/SKILL_DIR/scripts/as
 
 ### Step 5 — Install folder
 
+If Step 1 already ran this step, skip it.
+
 - **Ask.** "Where should OpenMontage go? Default: `~/OpenMontage`". Expand `~` to an absolute path and record it as `INSTALL_DIR`.
 - **Classify.** Run `bash "/abs/SKILL_DIR/scripts/preflight.sh" --folder "<INSTALL_DIR>"` (it never calls `git`):
-  - `FOLDER EMPTY` → use it.
-  - `FOLDER CLONE` → reuse it; Step 7 updates it.
+  - `FOLDER EMPTY` with `DISK OK` → use it.
+  - `FOLDER EMPTY` with `DISK LOW` → a new install needs 10 GB on that drive: ask the user to free space and classify again, or to pick a folder on another drive. If they decline both, stop.
+  - `FOLDER CLONE` → reuse it; Step 7 updates it. With `DISK LOW`, tell the user the update may still run out of space.
   - `FOLDER FOREIGN` → ask for another path. Do not delete or overwrite.
 
 ### Step 6 — Toolchain
 
-Follow `references/install.md` § Toolchain in order: Xcode Command Line Tools → Homebrew → one `brew install` of git, uv, ffmpeg and node → Node.js version check. Skip any item whose check already passes. Wherever the user installs something, wait for their confirmation, then re-run `bash "/abs/SKILL_DIR/scripts/preflight.sh"` and copy its `CLT` and `BREW_PREFIX` lines into the State block; continue only when the item shows as present (`CLT yes`, or a `BREW_PREFIX` path), otherwise ask the user to finish the install.
+Follow `references/install.md` § Toolchain in order: Xcode Command Line Tools → Homebrew → one `brew install` of git, uv, ffmpeg and node → Node.js version check. Skip any item whose check already passes. Wherever the user installs something, wait for their confirmation, then re-run `bash "/abs/SKILL_DIR/scripts/preflight.sh" --keep "/abs/STAGING"` (`--keep` stops it from listing the current key file as a leftover; never delete `STAGING` here) and copy its `CLT` and `BREW_PREFIX` lines into the State block; continue only when the item shows as present (`CLT yes`, or a `BREW_PREFIX` path), otherwise ask the user to finish the install.
 
 Check before moving on (Node.js requirement: `references/install.md` § Toolchain, **Node.js version**):
 
@@ -145,7 +148,7 @@ eval "$(<BREW_PREFIX>/bin/brew shellenv)"; git --version && uv --version && ffmp
 
 - **Clone.** Clone or update, then create or reuse the virtual environment, exactly as in `references/install.md` § OpenMontage, including its Python version rule and its guard for local edits.
 - **Dependencies.** Launch **two sub-agents in parallel**, one per brief in `references/install.md` § Sub-agent briefs: **Python stack** and **Node stack**. Fill in `<INSTALL_DIR>` and `<BREW_PREFIX>` before sending. If no sub-agent tool exists, run both briefs yourself, one after the other.
-- **Reports.** Each brief returns `STATUS: OK` or `STATUS: FAILED` with the failing command and the last error lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only the failed brief — at most two re-runs per brief, the last fallback being the pin to verified versions in that section. If it still fails, mark the step as an open issue and continue to Step 8. A `NOTES` value other than `none` goes under Open issues in the report.
+- **Reports.** Each brief returns `STATUS: OK` or `STATUS: FAILED` with the failing command and the last error lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only the failed brief — at most two re-runs per brief, the last fallback being `references/install.md` § Version pin fallback. If it still fails, mark the step as an open issue and continue to Step 8. A `NOTES` value other than `none` goes under Open issues in the report.
 
 ### Step 8 — Configure .env and WhisperX
 
@@ -195,7 +198,7 @@ Add keys to OpenMontage:
 - [ ] D. Verify and report
 ```
 
-- **A.** Run Step 1 **Probe**, **Leftover keys**, **Staging file** and **State block**. Ask for the existing install and run Step 5 **Classify** on it. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise remove the staging file and offer the full install instead.
+- **A.** Run Step 1 **Probe**, **Leftover keys**, **Status**, **Staging file** and **State block**. Ask for the existing install and run Step 5 **Classify** on it, ignoring the `DISK` line. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise remove the staging file and offer the full install instead.
 - **B.** Run Steps 2–4 for the affected services only.
 - **C.** Run the `write_env.py` command from Step 8, then remove the staging file.
 - **D.** Run Step 9.
