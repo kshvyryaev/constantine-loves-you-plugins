@@ -1,0 +1,13 @@
+{
+  "name": "constantine-loves-you-plugins",
+  "owner": {
+    "name": "kshvyryaev"
+  },
+  "plugins": [
+    {
+      "name": "open-montage",
+      "source": "./plugins/open-montage",
+      "description": "Guided macOS setup of OpenMontage, the open-source agentic video production studio: collects Hugging Face, Pixabay, Pexels and ElevenLabs keys without exposing them in chat, installs the toolchain and dependencies, configures .env and verifies the install."
+    }
+  ]
+}
