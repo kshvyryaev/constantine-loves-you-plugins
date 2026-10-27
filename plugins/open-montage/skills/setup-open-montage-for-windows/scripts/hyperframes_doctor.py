@@ -62,7 +62,10 @@ def run(install_dir: Path, seconds: int) -> tuple[int | None, str, str]:
         out, err = proc.communicate(timeout=seconds)
     except subprocess.TimeoutExpired:
         subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
-        proc.communicate()
+        try:
+            proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            pass
         return None, "", ""
     return proc.returncode, out, err
 

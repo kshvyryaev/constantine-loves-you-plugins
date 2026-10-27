@@ -167,7 +167,7 @@ Set-Location "<INSTALL_DIR>"; .\.venv\Scripts\python.exe "<SKILL_DIR>\scripts\in
 
 ### Step 9 — Verify
 
-1. Run `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\verify.ps1" "<INSTALL_DIR>"` (tool timeout 15 minutes). Each check line starts with `PASS`, `WARN`, `FAIL` or `INFO`; the last line is `TOTAL fail=<n> warn=<n>`. `INFO` marks an optional local extra that is not set up; it is never a problem.
+1. Run `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\verify.ps1" "<INSTALL_DIR>"` (tool timeout 25 minutes). Each check line starts with `PASS`, `WARN`, `FAIL` or `INFO`; the last line is `TOTAL fail=<n> warn=<n>`. `INFO` marks an optional local extra that is not set up; it is never a problem.
 2. For each `FAIL`, apply `references/troubleshooting.md` § Verification and run `verify.ps1` again — at most two rounds. What still fails goes into the report as open. Exception: a `FAIL key <VAR>` for a service the State block marks `unverified` is the user's earlier choice. Do not fix or ask again; list it under Open issues.
 
 ### Step 10 — Local extras (optional)

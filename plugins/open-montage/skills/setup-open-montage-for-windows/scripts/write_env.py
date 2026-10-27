@@ -18,14 +18,16 @@ SECRET = re.compile(r"KEY|TOKEN|SECRET|PASSWORD")
 
 
 def current_sid() -> str:
-    out = subprocess.run(["whoami", "/user", "/fo", "csv", "/nh"], capture_output=True, text=True, check=True).stdout
+    out = subprocess.run(
+        ["whoami", "/user", "/fo", "csv", "/nh"], capture_output=True, encoding="oem", errors="replace", check=True
+    ).stdout
     return out.strip().split(",")[-1].strip('"')
 
 
 def restrict(path: Path) -> None:
     subprocess.run(["icacls", str(path), "/reset"], capture_output=True)
     run = subprocess.run(
-        ["icacls", str(path), "/inheritance:r", "/grant:r", f"*{current_sid()}:F"], capture_output=True, text=True
+        ["icacls", str(path), "/inheritance:r", "/grant:r", f"*{current_sid()}:F"], capture_output=True
     )
     if run.returncode:
         sys.exit(f"ERROR: could not restrict {path} to the current user (icacls exit {run.returncode})")

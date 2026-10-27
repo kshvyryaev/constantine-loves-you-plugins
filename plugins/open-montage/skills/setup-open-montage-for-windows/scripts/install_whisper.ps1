@@ -30,6 +30,7 @@ if (-not $cli) {
         Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing -TimeoutSec 600
         Expand-Archive -LiteralPath $zip -DestinationPath $dest -Force
     } catch {
+        Remove-Item -LiteralPath $dest -Recurse -Force -ErrorAction SilentlyContinue
         "ERROR: download or unpack failed ($($_.Exception.Message))"; exit 1
     } finally {
         Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue

@@ -18,6 +18,13 @@ function Expand-UserPath([string]$Path) {
 
 # Strip an inline " # comment", surrounding quotes and (unless -KeepSpaces) all whitespace.
 function ConvertFrom-EnvValue([string]$Value, [switch]$KeepSpaces) {
+    # A quoted value is taken verbatim up to its closing quote, as OpenMontage's own loader does.
+    $t = $Value.Trim()
+    if ($t.Length -gt 0 -and ($t[0] -eq '"' -or $t[0] -eq "'")) {
+        $end = $t.IndexOf($t[0], 1)
+        if ($end -lt 0) { return $t.Substring(1) }
+        return $t.Substring(1, $end - 1)
+    }
     $v = $Value -replace '(^|\s)#.*$', ''
     if ($KeepSpaces) { $v = $v.Trim() } else { $v = $v -replace '\s', '' }
     if ($v.StartsWith('"')) { $v = $v.Substring(1) }
@@ -114,6 +121,11 @@ function Invoke-Bounded([int]$Seconds, [string]$FilePath, [string]$Arguments, [s
         return [pscustomobject]@{ Code = $null; Out = ""; Err = "timeout after $Seconds s" }
     }
     $p.WaitForExit()
+    # A child that inherited the output pipe can keep it open after the process exits.
+    if (-not $out.Wait(10000) -or -not $err.Wait(10000)) {
+        & taskkill.exe /T /F /PID $p.Id 2>&1 | Out-Null
+        return [pscustomobject]@{ Code = $p.ExitCode; Out = ""; Err = "output pipe still open after exit" }
+    }
     return [pscustomobject]@{ Code = $p.ExitCode; Out = $out.Result; Err = $err.Result }
 }
 
