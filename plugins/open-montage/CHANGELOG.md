@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.4.0 — 2026-10-27
+
+### Added
+
+- `setup-open-montage-for-windows` skill: the same guided flow for Windows 10 1809+ and Windows 11 (x64; ARM64 warned before any sign-up). **Not yet run end to end on a real Windows machine**: the skill says so and asks the agent to report every step that behaves differently.
+  - Scripts are Windows PowerShell 5.1 (`preflight.ps1`, `new_staging.ps1`, `ask_secret.ps1`, `check_key.ps1`, `install_tools.ps1`, `verify.ps1`, `install_whisper.ps1`, `docker_probe.ps1`, shared `common.ps1`), run through `powershell -NoProfile -ExecutionPolicy Bypass -File`, so they work from a PowerShell or a Git Bash shell tool.
+  - Keys go through a hidden Windows Forms dialog or a file; the staging file lives in `%LOCALAPPDATA%\open-montage` and, like `.env`, is restricted to the current user with `icacls` (the counterpart of mode 600).
+  - Toolchain through winget: Git, uv, FFmpeg, Node.js LTS and the Visual C++ runtime (PyTorch DLLs fail without it). Every inline command reloads `PATH` from the registry, so tools installed during the session are found.
+  - No `make` on Windows: `verify.ps1` and `hyperframes_doctor.py` run the Makefile's Python one-liners directly.
+  - Local extras: whisper.cpp comes from the official prebuilt release (`whisper-bin-x64.zip`) and is wired in through `HYPERFRAMES_WHISPER_PATH`, since HyperFrames has no Windows installer for it.
+  - Windows troubleshooting: execution policy, UAC, missing winget, `WinError 126` (Visual C++ runtime), long paths, antivirus file locks, `ERR_INVALID_ARG_TYPE` from npm, WSL 2 for Docker.
+
+### Changed
+
+- **Breaking:** the macOS skill is renamed `setup-open-montage` → `setup-open-montage-for-mac` (folder and `name`), so the two platform skills read as a pair. Invoke it as `open-montage:setup-open-montage-for-mac`.
+- The macOS skill's description sends Windows users to the new skill instead of saying no skill covers Windows. Plugin, marketplace and README descriptions name both platforms.
+
 ## 1.3.1 — 2026-10-25
 
 ### Removed
