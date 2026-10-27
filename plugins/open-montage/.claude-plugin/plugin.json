@@ -1,7 +1,7 @@
 {
   "name": "open-montage",
   "description": "Guided macOS and Windows setup of OpenMontage, the open-source agentic video production studio: collects Hugging Face, Pixabay and ElevenLabs keys without exposing them in chat, installs the toolchain (Homebrew on macOS, winget on Windows) and dependencies, configures .env, verifies the install and optionally adds local HyperFrames extras.",
-  "version": "1.4.0",
+  "version": "2.0.0",
   "author": {
     "name": "kshvyryaev"
   }

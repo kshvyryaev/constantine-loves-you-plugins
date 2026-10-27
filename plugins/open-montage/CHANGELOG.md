@@ -1,5 +1,27 @@
 # Changelog
 
+## 2.0.0 — 2026-10-27
+
+### Changed
+
+- **Major version for the rename shipped in 1.4.0.** `setup-open-montage` became `setup-open-montage-for-mac`, which breaks the old invocation `open-montage:setup-open-montage`; 1.4.0 should have been a major release. Migration: call `open-montage:setup-open-montage-for-mac` on macOS and `open-montage:setup-open-montage-for-windows` on Windows.
+- Both skill descriptions now open with the platform ("macOS only.", "Windows 10/11 only."), so routing does not depend on a trigger buried mid-sentence.
+
+### Fixed (Windows skill, from skill-review)
+
+- An early stop (toolchain or clone failure, declined venv recreate) now has a defined report: `verify.ps1` on an existing clone, otherwise `install_tools.ps1 -CheckOnly` with "OpenMontage is not installed".
+- The add-key flow keeps the staging file until `write_env.py` prints its `SET` lines, as Step 8 does.
+- `LONGPATHS no` is acted on in Step 5 (short folder or enabling long paths) instead of only after a failed `pip install`.
+- The key-file example in Steps 2–4 is a `<KEY_FILE>` placeholder; the verification status has its own `## Verification status` section that references link to.
+- `install.md` writes `<PATH line>` instead of eight literal copies of the PATH reload; decline outcomes and the UAC list live in one place each.
+- Dependency installs moved from free-text sub-agent briefs into `install_python_deps.ps1` and `install_node_deps.ps1`: fixed order, stop on first failure, one `WinError 32` retry, the `npx --yes npm install` fallback and the `STATUS`/`FAILED_COMMAND`/`NOTES`/`LAST_ERROR_LINES` block are now code. Step 7 starts both as background commands and waits for both before Step 8.
+- Re-running the preflight mid-session (after installing winget) uses `-Keep`, and **Leftover keys** never deletes the session's own `STAGING`, so collected keys cannot be wiped.
+- Long commands, `verify.ps1` included, run in the background when the client allows it; without that, a timed-out run is simply repeated.
+- "reinstall OpenMontage" / "переустанови OpenMontage" trigger the Windows skill too.
+- A **Resuming** rule restores the State block after a context compaction or in a new session and asks before treating the newest key file as a leftover.
+- Step 7 **Clone** lists its decision branches (clean, local changes, local commits, venv missing or wrong) in SKILL.md; `troubleshooting.md` no longer links back into `install.md` and `extras.md` and carries the `write_env.py --set` commands itself.
+- Step 10 names its **Offer condition**, which the add-extras flow refers to by name.
+
 ## 1.4.0 — 2026-10-27
 
 ### Added

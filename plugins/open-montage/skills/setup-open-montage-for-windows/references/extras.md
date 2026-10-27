@@ -1,6 +1,6 @@
 # Local extras for HyperFrames
 
-Ported from the macOS flow, which was verified on 2026-10-25 against OpenMontage `e01dbf4` and HyperFrames 0.8.185. The Windows parts follow HyperFrames 0.8.192's own lookup code — whisper.cpp through `HYPERFRAMES_WHISPER_PATH`, then `whisper-cli` on `PATH` (HyperFrames has no Windows installer for it); Python through `HYPERFRAMES_PYTHON`, then the first `python3` or `python` on `PATH`; Docker through `docker` on `PATH` — (Windows verification status: SKILL.md intro). Write literal absolute paths in place of `<INSTALL_DIR>` and `<SKILL_DIR>`.
+Ported from the macOS flow, which was verified on 2026-10-25 against OpenMontage `e01dbf4` and HyperFrames 0.8.185. The Windows parts follow HyperFrames 0.8.192's own lookup code — whisper.cpp through `HYPERFRAMES_WHISPER_PATH`, then `whisper-cli` on `PATH` (HyperFrames has no Windows installer for it); Python through `HYPERFRAMES_PYTHON`, then the first `python3` or `python` on `PATH`; Docker through `docker` on `PATH` — (Windows verification status: SKILL.md § Verification status). Write literal absolute paths in place of `<INSTALL_DIR>` and `<SKILL_DIR>`.
 
 Contents: [The offer](#the-offer) · [Install](#install) · [Docker](#docker) · [Doctor](#doctor)
 

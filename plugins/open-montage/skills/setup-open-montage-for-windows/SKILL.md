@@ -1,31 +1,35 @@
 ---
 name: setup-open-montage-for-windows
 description: >
-  Guided Windows 10/11 install of OpenMontage, the agentic video studio: Hugging Face, Pixabay and
-  ElevenLabs sign-ups one at a time, API keys kept out of chat, toolchain through winget, verified end
-  to end. Also adds or replaces keys in an existing Windows install and adds optional local HyperFrames
-  extras. Use on Windows when user says "install OpenMontage", "set up OpenMontage", "configure
-  OpenMontage", "reinstall OpenMontage", "install OpenMontage on Windows", "add keys to OpenMontage",
-  "add local extras to OpenMontage", "fix hyperframes doctor in OpenMontage", "установи OpenMontage",
-  "установи OpenMontage на Windows", "настрой OpenMontage", "добавь ключи в OpenMontage", "поставь
-  локальные дополнения OpenMontage". Don't use when: user is on macOS (use setup-open-montage-for-mac) or
-  Linux, wants to produce a video with an existing install (no skill: start Claude inside the
-  OpenMontage folder), or asks to uninstall OpenMontage (no skill covers it; tell the user).
+  Windows 10/11 only. Guided install of OpenMontage: Hugging Face, Pixabay and ElevenLabs sign-ups
+  one at a time, API keys kept out of chat, toolchain through winget, verified install. Also adds or
+  replaces keys in an existing install and adds optional local HyperFrames extras. Use on Windows
+  when user says "install OpenMontage", "set up OpenMontage", "configure OpenMontage", "reinstall
+  OpenMontage", "add keys to OpenMontage", "add local extras to OpenMontage", "fix hyperframes
+  doctor in OpenMontage", "установи OpenMontage", "переустанови OpenMontage", "настрой OpenMontage",
+  "добавь ключи в OpenMontage", "поставь локальные дополнения OpenMontage". Don't use when: user is
+  on macOS (use setup-open-montage-for-mac) or Linux, wants to produce a video with an existing
+  install (no skill: start Claude inside the OpenMontage folder), or asks to uninstall OpenMontage
+  (no skill covers it; tell the user).
 metadata:
-  version: 1.4.0
+  version: 2.0.0
   author: kshvyryaev
 ---
 
 # Setup OpenMontage on Windows
 
-Guide the user from a fresh Windows PC to a verified OpenMontage install with every agreed service configured. The user does the sign-ups; you do everything else. This flow is a port of the verified macOS skill and has not yet been run end to end on real Windows: when a step behaves differently from this file, fix it through `references/troubleshooting.md` and name the difference in the report.
+Guide the user from a fresh Windows PC to a verified OpenMontage install with every agreed service configured. The user does the sign-ups; you do everything else.
+
+## Verification status
+
+This flow is a port of the verified macOS skill and has not yet been run end to end on real Windows. When a step behaves differently from this file, fix it through `references/troubleshooting.md` and name the difference under Open issues in the report.
 
 ## File map
 
 | File | Read when |
 |---|---|
 | `references/services.md` | Steps 2–4: sign-up steps, key settings, what each key enables |
-| `references/install.md` | Steps 6–7: winget toolchain, Python version rule, the two sub-agent briefs |
+| `references/install.md` | Steps 6–7: winget toolchain, clone and venv, Python version rule, dependency scripts |
 | `references/extras.md` | Step 10: the extras offer, whisper.cpp download, Docker start, doctor results |
 | `references/troubleshooting.md` | A command fails, or a result is not covered by the tables in this file |
 | `scripts/common.ps1` | Never run it directly: the other `.ps1` scripts load it |
@@ -34,6 +38,7 @@ Guide the user from a fresh Windows PC to a verified OpenMontage install with ev
 | `scripts/ask_secret.ps1` | Steps 2–4: capture a key into the staging file without showing it |
 | `scripts/check_key.ps1` | Steps 2–4: validate one key against its service |
 | `scripts/install_tools.ps1` | Step 6: install Git, uv, FFmpeg, Node.js and the Visual C++ runtime with winget |
+| `scripts/install_python_deps.ps1`, `scripts/install_node_deps.ps1` | Step 7: install the Python and Node dependencies in a fixed order |
 | `scripts/write_env.py` | Steps 8 and 10: merge staged keys, or one non-secret setting, into `.env` |
 | `scripts/install_compat.py` | Steps 8–9: install or check the WhisperX compatibility layer in `.venv` |
 | `scripts/openmontage_whisperx_compat.py` | Never read it into context: `install_compat.py` copies it into `.venv` |
@@ -44,7 +49,7 @@ Guide the user from a fresh Windows PC to a verified OpenMontage install with ev
 
 - Windows 10 1809 or newer, or Windows 11, 64-bit; at least 10 GB free on the install folder's drive for a new install (`preflight.ps1` checks both; adding keys needs no free space).
 - Internet access, and winget (App Installer); Step 6 covers a PC without it.
-- The user can approve UAC prompts: Git, Node.js and the Visual C++ runtime install machine-wide.
+- The user can approve UAC prompts (`references/install.md` § Toolchain lists them).
 - An interactive desktop session for the hidden key dialog. Over SSH or in a headless client, every key must come from a file (`-FromFile`).
 - A shell tool (PowerShell, or Bash such as Git Bash in Claude Code). Without one, stop and tell the user the skill cannot run here.
 - x64 is the target platform; Step 1 **Status** covers ARM64.
@@ -61,14 +66,16 @@ Guide the user from a fresh Windows PC to a verified OpenMontage install with ev
 5. **Use literal paths.** Every tool call may start a fresh shell, so variables do not carry over. Write the absolute values of `SKILL_DIR`, `STAGING` and `INSTALL_DIR` from the State block into every command, with backslashes, in double quotes — paths may contain spaces. `SKILL_DIR` is the directory containing this `SKILL.md`.
 6. **One service at a time.** Finish a service (key saved and checked, or explicitly skipped) before introducing the next.
 7. **Admin installs need the user's approval.** Before `install_tools.ps1` runs, tell the user which UAC prompts to expect (`references/install.md` § Toolchain). Anything that needs an administrator PowerShell (long paths, `winget source reset`, `wsl --install`) is given as an exact command for the user to run; wait until they confirm it finished.
-8. **Long commands get a long timeout** (10 minutes or more; 30 for `install_tools.ps1`). `ask_secret.ps1` always runs in the foreground (its dialog waits up to 10 minutes); a tool timeout on it counts as `CANCELLED`. `install_tools.ps1`, `pip install`, `npm.cmd install` and the sub-agent briefs may also run in the background.
+8. **Long commands run in the background when the client allows it.** `install_tools.ps1`, both dependency scripts, `verify.ps1`, `pip install` and `npm.cmd install` can take longer than a client's foreground limit (Claude Code: 10 minutes): run them as background commands and wait for their final line (`RESULT`, `LAST_ERROR_LINES`, `TOTAL`). Without background commands, use the longest tool timeout available; if it still times out, run the same command again — finished work is skipped. `ask_secret.ps1` always runs in the foreground (its dialog waits up to 10 minutes); a tool timeout on it counts as `CANCELLED`.
 9. **Never overwrite foreign data.** An existing install folder is reused only if it is an OpenMontage git clone; any other non-empty folder means asking for a different path. Local edits inside a clone are set aside only with the user's consent.
-10. **No success without evidence.** The final report comes only from `verify.ps1` output, plus the `hyperframes_doctor.py` lines for local extras.
+10. **No success without evidence.** The final report comes only from `verify.ps1` output, plus the `hyperframes_doctor.py` lines for local extras — or, when the run ended before an install folder existed, from `install_tools.ps1 -CheckOnly` (Step 11 item 1).
 11. **Speak the user's language.** Commands, file names and env var names stay as they are.
 
 ## Progress checklist
 
 Post this after Step 1 and repost it, updated, at every step boundary. The State block is the session memory: keep it current.
+
+**Resuming.** After a context compaction or in a new session, take the State block from the last posted checklist. If none is visible, do not run Step 1 **Leftover keys** blindly: list `%LOCALAPPDATA%\open-montage\keys.*`, ask the user whether the newest file belongs to the run in progress, and keep it as `STAGING` if so; then find the reached step with `preflight.ps1 -Folder` and `verify.ps1`.
 
 ```text
 OpenMontage setup (Windows):
@@ -99,11 +106,11 @@ State:
 ### Step 1 — Preflight
 
 - **Probe.** Run `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\preflight.ps1"`. If it fails to start because scripts are blocked, see `references/troubleshooting.md` § Shell.
-- **Leftover keys.** Do this before acting on `STATUS`, even on `STOP`. For every `STALE_STAGING <path>` line, tell the user a key file from an interrupted earlier run was found and remove it.
+- **Leftover keys.** Do this before acting on `STATUS`, even on `STOP`. For every `STALE_STAGING <path>` line, tell the user a key file from an interrupted earlier run was found and remove it — but never the path in the State block's `STAGING`. Any later preflight run in the session passes `-Keep "<STAGING>"`, so the current key file is not listed.
 - **Status.** `STATUS STOP <reason>`: tell the user the reason and stop. `ARCH arm64`: before any sign-up, tell the user the install is written for x64 and the Python stack (faster-whisper, WhisperX) will probably fail to install for lack of Windows ARM64 packages; continue only if they agree, otherwise stop. `STATUS LOW_DISK <reason>`: the user profile's drive is short on space. Tell the user and run Step 5 now, before any sign-up, so a stop never comes after Steps 2–4. The add-key and local-extras flows ignore `LOW_DISK` and `ARCH`.
 - **Staging file.** Run `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\new_staging.ps1"` and note the path from its `STAGING <path>` line. It lives in `%LOCALAPPDATA%\open-montage`, readable only by the current user, so a later session finds leftovers. `ERROR`: `references/troubleshooting.md` § Keys.
 - **State block.** Fill it, `ARCH` from the probe.
-- **Summary.** Tell the user in 2–3 lines what is already installed (`TOOL`, `VCREDIST` and `WINGET` lines), what will be installed, and that the next steps are three short sign-ups.
+- **Summary.** Tell the user in 2–3 lines what is already installed (`TOOL`, `VCREDIST` and `WINGET` lines), what will be installed, whether long paths are enabled (`LONGPATHS`), and that the next steps are three short sign-ups.
 
 ### Steps 2–4 — Services
 
@@ -115,8 +122,9 @@ Order: Hugging Face → Pixabay → ElevenLabs. For each service, read its secti
   ```powershell
   powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\ask_secret.ps1" -Var HF_TOKEN -Staging "<STAGING>" -Prompt "Paste your Hugging Face token"
   # or, if the user named a file:
-  powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\ask_secret.ps1" -Var HF_TOKEN -Staging "<STAGING>" -FromFile "C:\Users\me\Documents\hf-token.txt"
+  powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\ask_secret.ps1" -Var HF_TOKEN -Staging "<STAGING>" -FromFile "<KEY_FILE>"
   ```
+  `<KEY_FILE>` is the absolute path the user named, for example `C:\Users\Anna\Documents\hf-token.txt`.
   Wait for its result line before **Validate**. Expected: `SAVED: <VAR> (<n> chars)`. `CANCELLED`: the dialog was closed, left empty or timed out — ask the user and capture again. `ERROR`: follow `references/troubleshooting.md` § Keys.
 - **Validate.** `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\check_key.ps1" <VAR> "<STAGING>"`, then act on the result and update the State block:
 
@@ -136,7 +144,7 @@ A skipped service is allowed: drop its key with `ask_secret.ps1 -Var <VAR> -Stag
 
 If Step 1 already ran this step, skip it.
 
-- **Ask.** "Where should OpenMontage go? Default: `%USERPROFILE%\OpenMontage`". Record the absolute path (for example `C:\Users\Anna\OpenMontage`) as `INSTALL_DIR`. A short path on a local NTFS drive is best: Windows limits path length.
+- **Ask.** "Where should OpenMontage go? Default: `%USERPROFILE%\OpenMontage`". Record the absolute path (for example `C:\Users\Anna\OpenMontage`) as `INSTALL_DIR`. Use a folder on a local NTFS drive. With `LONGPATHS no` (the Windows default), paths are capped at 260 characters and deep Python packages can fail to install: suggest a short folder such as `C:\OpenMontage`, or let the user enable long paths with the administrator command in `references/troubleshooting.md` § Dependencies (`WinError 206` row).
 - **Classify.** Run `powershell -NoProfile -ExecutionPolicy Bypass -File "<SKILL_DIR>\scripts\preflight.ps1" -Folder "<INSTALL_DIR>"` (it never calls `git`):
   - `FOLDER EMPTY` with `DISK OK` → use it.
   - `FOLDER EMPTY` with `DISK LOW` → a new install needs 10 GB on that drive: ask the user to free space and classify again, or to pick a folder on another drive. If they decline both, stop.
@@ -150,9 +158,9 @@ Follow `references/install.md` § Toolchain: winget check → UAC warning → `i
 
 ### Step 7 — OpenMontage and dependencies
 
-- **Clone.** Clone or update, then create or reuse the virtual environment, exactly as in `references/install.md` § OpenMontage, including its Python version rule and its guard for local edits. Both ask the user first. Declined local-edit stash → keep the clone, continue, and list "OpenMontage not updated: local edits kept" under Open issues. Declined venv recreate → the run ends here: remove the staging file, skip Steps 8–10 and send the Step 11 report with that open issue.
-- **Dependencies.** Launch **two sub-agents in parallel**, one per brief in `references/install.md` § Sub-agent briefs: **Python stack** and **Node stack**. Fill in `<INSTALL_DIR>` before sending. If no sub-agent tool exists, run both briefs yourself, one after the other.
-- **Reports.** Each brief returns `STATUS: OK` or `STATUS: FAILED` with the failing command and the last error lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only the failed brief — at most two re-runs per brief, the last fallback being `references/install.md` § Version pin fallback, which asks the user first (declined → the failing brief goes under Open issues). If it still fails, mark the step as an open issue and continue to Step 8. A `NOTES` value other than `none` goes under Open issues in the report.
+- **Clone.** Clone or update, then create or reuse the virtual environment, with the commands in `references/install.md` § OpenMontage. Decisions: new folder → clone; clean clone → `pull --ff-only`; local changes → show them, ask, `stash` only on consent; pull refuses on a clean clone (local commits) → show them, ask, see `references/troubleshooting.md` § Dependencies; venv missing → create with Python 3.12; venv outside 3.10–3.13 → ask, recreate with `--clear` only on consent. Declined local-edit stash → keep the clone, continue, and list "OpenMontage not updated: local edits kept" under Open issues. Declined venv recreate → the run ends here: remove the staging file, skip Steps 8–10 and send the Step 11 report with that open issue.
+- **Dependencies.** Start both scripts from `references/install.md` § Dependency scripts at the same time, as two background commands; without background commands, run them one after the other.
+- **Reports.** Wait for both result blocks before Step 8: `install_compat.py` needs WhisperX in place. Each block starts with `STATUS: OK` or `STATUS: FAILED` and names the failing command and its last output lines. On `FAILED`, apply `references/troubleshooting.md` § Dependencies and re-run only that script — at most two re-runs per script, the last fallback being `references/install.md` § Version pin fallback, which asks the user first (declined → the failing script goes under Open issues). If it still fails, mark the step as an open issue and continue to Step 8. A `NOTES` value other than `none` goes under Open issues in the report.
 
 ### Step 8 — Configure .env and WhisperX
 
@@ -172,7 +180,7 @@ Set-Location "<INSTALL_DIR>"; .\.venv\Scripts\python.exe "<SKILL_DIR>\scripts\in
 
 ### Step 10 — Local extras (optional)
 
-Offer only when the last `verify.ps1` run has no `FAIL` lines other than `FAIL key` for `unverified` services; otherwise mark this step skipped and say in the report that extras can be added later (§ Add local extras later).
+**Offer condition:** the last `verify.ps1` run has no `FAIL` lines other than `FAIL key` for `unverified` services. Offer only when it holds; otherwise mark this step skipped and say in the report that extras can be added later (§ Add local extras later).
 
 Send the offer from `references/extras.md` § The offer once, as a single message. On two "no" answers, mark the step skipped by the user. Otherwise follow `references/extras.md` § Install, § Docker and § Doctor for what the user accepted. A failed item goes under Open issues; the next item still runs.
 
@@ -181,7 +189,7 @@ Send the offer from `references/extras.md` § The offer once, as a single messag
 
 ### Step 11 — Report
 
-1. If Step 10 installed or started anything, run `verify.ps1` again as in Step 9 item 1: pip installs can move shared packages, and the report must show the final state.
+1. Get the final state. If Step 10 installed or started anything, run `verify.ps1` again as in Step 9 item 1: pip installs can move shared packages. If the run ended early and Step 9 never ran: with an `INSTALL_DIR` clone, run `verify.ps1` once; without one, run `install_tools.ps1 -CheckOnly`, start the report with "OpenMontage is not installed", fill **Installed** from its `PRESENT` lines and put the reason the run stopped first under Open issues.
 2. Confirm the staging file is gone (`Test-Path -LiteralPath "<STAGING>"` prints `False`), then send the final report:
 
 ```text
@@ -221,7 +229,7 @@ Add keys to OpenMontage (Windows):
 
 - **A.** Run Step 1 **Probe**, **Leftover keys**, **Status**, **Staging file** and **State block**. Ask for the existing install and run Step 5 **Classify** on it, ignoring the `DISK` line. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise remove the staging file and offer the full install instead.
 - **B.** Run Steps 2–4 for the affected services only.
-- **C.** Run the `write_env.py` command from Step 8, then remove the staging file.
+- **C.** Run the `write_env.py` command from Step 8 with that step's result handling; remove the staging file only after its `SET` lines appear.
 - **D.** Run Step 9, then Step 11 (no extras offer in this flow).
 
 ## Add local extras later
@@ -236,7 +244,7 @@ Add local extras to OpenMontage (Windows):
 ```
 
 - **A.** Run Step 1 **Probe**, **Leftover keys**, **Status** and **State block** (`STAGING: none`). Ask for the existing install and run Step 5 **Classify** on it, ignoring the `DISK` line. Continue only on `FOLDER CLONE` with a `VENV Python 3.…` line; otherwise offer the full install instead.
-- **B.** Run Step 10, skipping its `fail=0` condition: the user asked for the extras.
+- **B.** Run Step 10 without its **Offer condition**: the user asked for the extras.
 - **C.** Run Step 9, then Step 11 item 2 (Step 9 already ran after the extras, so item 1 is not needed), leaving out the staging-file check and the Services block.
 
 ## Troubleshooting

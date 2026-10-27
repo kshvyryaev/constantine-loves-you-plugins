@@ -1,7 +1,7 @@
 ---
 name: setup-open-montage-for-mac
 description: >
-  Guided macOS install of OpenMontage, the agentic video studio: Hugging Face, Pixabay and
+  macOS only. Guided install of OpenMontage, the agentic video studio: Hugging Face, Pixabay and
   ElevenLabs sign-ups one at a time, API keys kept out of chat, verified end to end. Also adds or
   replaces keys in an existing install and adds optional local HyperFrames extras.
   Use when user says "install OpenMontage", "set up OpenMontage", "configure OpenMontage",
@@ -13,7 +13,7 @@ description: >
   setup-open-montage-for-windows), user is on Linux or asks to uninstall OpenMontage (no skill covers
   these; tell the user).
 metadata:
-  version: 1.4.0
+  version: 2.0.0
   author: kshvyryaev
 ---
 
